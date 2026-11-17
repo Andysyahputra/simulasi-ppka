@@ -1,0 +1,1963 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Simulasi PPKA — Stasiun Sukamaju</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+      button, [role="button"], select, summary, input:not([type="checkbox"], [type="radio"]) { min-height: 2rem; }
+      * { box-sizing: border-box; }
+      :root{
+        --bg:#edf0f3; --panel:#ffffff; --panel2:#f5f7f9; --ink:#17222d; --muted:#5a6b7a;
+        --line:#d3dce3; --line2:#b9c7d2;
+        --amber:#b97a0e; --amber-bg:#fdf3dd;
+        --red:#c22f2f; --red-bg:#fdecec;
+        --green:#1d7a3d; --green-bg:#e6f4ea;
+        --teal:#0e7490; --teal-bg:#e0f2f7;
+        --board:#0f1b26;
+        --shadow:0 10px 30px rgba(16,32,48,.10);
+      }
+      @media (prefers-color-scheme: dark){
+        :root{
+          --bg:#0b1117; --panel:#141f2a; --panel2:#182635; --ink:#e9eff5; --muted:#9db1c2;
+          --line:#26394c; --line2:#33506a;
+          --amber:#e0a83c; --amber-bg:#3a2d10;
+          --red:#f0766f; --red-bg:#3d1a18;
+          --green:#5cc97e; --green-bg:#14301d;
+          --teal:#4cc3dd; --teal-bg:#0f2f3a;
+          --shadow:0 10px 30px rgba(0,0,0,.35);
+        }
+      }
+      html,body{ margin:0; padding:0; }
+      body{
+        background:var(--bg); color:var(--ink);
+        font-family:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+        -webkit-font-smoothing:antialiased;
+      }
+      .mono{ font-family:"IBM Plex Mono", ui-monospace, monospace; }
+      .wrap{ max-width:1240px; margin:0 auto; padding:14px 14px 40px; }
+
+      /* ---------- HUD ---------- */
+      .hud{
+        display:flex; flex-wrap:wrap; gap:8px; align-items:stretch;
+        background:var(--panel); border:1px solid var(--line); border-radius:14px;
+        padding:10px; box-shadow:var(--shadow);
+      }
+      .hud .stat{
+        flex:1 1 108px; background:var(--panel2); border:1px solid var(--line);
+        border-radius:10px; padding:7px 12px 8px; min-width:104px;
+      }
+      .hud .stat .k{ font-size:.66rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); }
+      .hud .stat .v{ font-family:"IBM Plex Mono", monospace; font-size:1.28rem; font-weight:700; line-height:1.15; }
+      .hud .stat .v small{ font-size:.72rem; color:var(--muted); font-weight:600; }
+      .hud .tools{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+      .tbtn{
+        appearance:none; border:1px solid var(--line2); background:var(--panel); color:var(--ink);
+        border-radius:9px; padding:6px 12px; font:600 .85rem "IBM Plex Sans", sans-serif; cursor:pointer;
+      }
+      .tbtn:hover{ border-color:var(--amber); }
+      .tbtn.on{ background:var(--ink); color:var(--bg); border-color:var(--ink); }
+      .tbtn:focus-visible, .seg button:focus-visible, .sigbtn:focus-visible, .ttrow:focus-visible{ outline:3px solid var(--amber); outline-offset:2px; }
+
+      /* ---------- Layout ---------- */
+      .grid{ display:grid; grid-template-columns:minmax(0,1fr) 348px; gap:14px; margin-top:14px; align-items:start; }
+      @media (max-width:960px){ .grid{ grid-template-columns:1fr; } }
+      .card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); }
+      .card .chead{
+        display:flex; align-items:center; justify-content:space-between; gap:10px;
+        padding:11px 14px; border-bottom:1px solid var(--line);
+      }
+      .card .chead h2{ margin:0; font-size:.92rem; font-weight:800; letter-spacing:.02em; }
+      .card .chead .sub{ font-size:.74rem; color:var(--muted); font-weight:600; }
+
+      /* ---------- Board ---------- */
+      .boardwrap{ position:relative; background:var(--board); border-radius:0 0 13px 13px; overflow:hidden; }
+      #board3d{ position:relative; width:100%; aspect-ratio:1000/540; background:#0f1b26; overflow:hidden; }
+      #board3d canvas{ display:block; width:100%; height:100%; touch-action:none; cursor:grab; }
+      #board3d canvas:active{ cursor:grabbing; }
+      .viewbar{ position:absolute; left:10px; bottom:10px; display:flex; gap:6px; flex-wrap:wrap; z-index:3; }
+      .viewbar button{ appearance:none; border:1px solid rgba(255,255,255,.35); background:rgba(10,20,30,.72); color:#eef4f9; border-radius:999px; padding:6px 12px; font:700 .74rem "IBM Plex Sans", sans-serif; cursor:pointer; backdrop-filter:blur(4px); }
+      .viewbar button.on{ background:#b97a0e; border-color:#b97a0e; color:#fff; }
+      .camhint{ position:absolute; right:10px; bottom:10px; z-index:3; background:rgba(10,20,30,.72); color:#cfe0ee; border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:6px 11px; font:600 .7rem "IBM Plex Sans", sans-serif; backdrop-filter:blur(4px); }
+      @media (max-width:560px){ .camhint{ display:none; } #board3d{ aspect-ratio:1000/620; } }
+      .boardfallback{ padding:26px 18px; color:#ffd9d4; font-weight:600; font-size:.9rem; line-height:1.6; text-align:center; }
+      .eventbanner{
+        position:absolute; top:10px; left:50%; transform:translateX(-50%);
+        background:#7c1d1d; color:#ffe1e1; border:1px solid #e0655f;
+        font:700 .8rem "IBM Plex Sans", sans-serif; padding:7px 14px; border-radius:999px;
+        display:none; white-space:nowrap; max-width:94%; overflow:hidden; text-overflow:ellipsis;
+      }
+      .eventbanner.show{ display:block; }
+      .legend{ display:flex; flex-wrap:wrap; gap:6px 16px; padding:9px 14px 12px; font-size:.76rem; color:var(--muted); font-weight:600; }
+      .legend .dot{ display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+
+      /* ---------- Controls ---------- */
+      .controls{ padding:12px 14px 4px; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+      @media (max-width:620px){ .controls{ grid-template-columns:1fr; } }
+      .ctl h3{ margin:0 0 7px; font-size:.7rem; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); }
+      .ctl h3 .locktag{ color:var(--red); letter-spacing:0; text-transform:none; }
+      .seg{ display:flex; gap:6px; }
+      .seg button{
+        flex:1; appearance:none; cursor:pointer; border:1px solid var(--line2); background:var(--panel2);
+        color:var(--ink); border-radius:9px; padding:8px 4px; font:700 .86rem "IBM Plex Sans", sans-serif;
+      }
+      .seg button.on{ background:var(--amber); border-color:var(--amber); color:#fff; }
+      .seg button:disabled{ opacity:.45; cursor:not-allowed; }
+      .seg button .closed{ display:block; font-size:.62rem; font-weight:700; color:var(--red); }
+      .seg button.on .closed{ color:#ffe9c9; }
+      .siggrid{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+      @media (max-width:420px){ .siggrid{ grid-template-columns:1fr; } }
+      .sigbtn{
+        appearance:none; cursor:pointer; text-align:left; border:1px solid var(--line2); background:var(--panel2);
+        color:var(--ink); border-radius:9px; padding:7px 10px; font:600 .8rem "IBM Plex Sans", sans-serif;
+        display:flex; align-items:center; gap:9px; width:100%;
+      }
+      .sigbtn .lamp{ width:15px; height:15px; border-radius:50%; background:var(--red); flex:none; box-shadow:0 0 0 3px var(--red-bg); }
+      .sigbtn.open .lamp{ background:#2fbf5a; box-shadow:0 0 0 3px var(--green-bg); }
+      .sigbtn small{ display:block; font-size:.66rem; color:var(--muted); font-weight:600; }
+      .sigbtn .st{ margin-left:auto; font-family:"IBM Plex Mono", monospace; font-size:.68rem; font-weight:700; color:var(--red); flex:none; }
+      .sigbtn.open .st{ color:var(--green); }
+      @media (prefers-reduced-motion: no-preference){
+        .shake{ animation:shk .3s ease; }
+        @keyframes shk{ 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+      }
+
+      /* ---------- Selected train / hint ---------- */
+      .selbox{ margin:12px 14px 14px; border:1px solid var(--amber); background:var(--amber-bg); border-radius:11px; padding:11px 13px; }
+      .selbox .t{ font-weight:800; font-size:.92rem; }
+      .selbox p{ margin:5px 0 0; font-size:.85rem; line-height:1.5; }
+      .badge{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:.66rem; font-weight:800; letter-spacing:.03em; }
+      .badge.pen{ background:#f6d7dc; color:#8c2438; } .badge.lok{ background:#d3ecd9; color:#14532d; }
+      .badge.bar{ background:#dde6ee; color:#33475c; }
+      @media (prefers-color-scheme: dark){
+        .badge.pen{ background:#7c2d3e; color:#ffd9de; } .badge.lok{ background:#14532d; color:#c9f2d4; }
+        .badge.bar{ background:#33475c; color:#d3e2ef; }
+      }
+
+      /* ---------- Timetable ---------- */
+      .ttrow{
+        display:grid; grid-template-columns:52px 1fr auto; gap:4px 10px; width:100%; text-align:left;
+        padding:9px 14px; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--ink);
+        cursor:pointer; font-family:"IBM Plex Sans", sans-serif; align-items:center; border-radius:0;
+      }
+      .ttrow:hover{ background:var(--panel2); }
+      .ttrow.sel{ background:var(--amber-bg); box-shadow:inset 3px 0 0 var(--amber); }
+      .ttrow .tm{ font-family:"IBM Plex Mono", monospace; font-weight:700; font-size:.86rem; }
+      .ttrow .nm{ font-weight:700; font-size:.86rem; }
+      .ttrow .mt{ font-size:.72rem; color:var(--muted); font-weight:600; }
+      .chip{ font-size:.64rem; font-weight:800; padding:3px 8px; border-radius:999px; white-space:nowrap; }
+      .chip.wait{ background:var(--panel2); color:var(--muted); border:1px solid var(--line2); }
+      .chip.move{ background:var(--teal-bg); color:var(--teal); }
+      .chip.stop{ background:var(--amber-bg); color:var(--amber); }
+      .chip.done{ background:var(--green-bg); color:var(--green); }
+      .chip.late{ background:var(--red-bg); color:var(--red); }
+
+      /* ---------- Log ---------- */
+      .loglist{ list-style:none; margin:0; padding:8px 0; max-height:300px; overflow:auto; }
+      .loglist li{ padding:5px 14px; font-size:.8rem; line-height:1.45; display:flex; gap:9px; }
+      .loglist .lt{ font-family:"IBM Plex Mono", monospace; font-size:.7rem; color:var(--muted); font-weight:700; padding-top:2px; flex:none; }
+      .loglist li.warn{ color:var(--red); font-weight:600; }
+      .loglist li.ok{ color:var(--green); font-weight:600; }
+      .loglist li.evt{ color:var(--amber); font-weight:700; }
+
+      details.howto{ margin-top:14px; }
+      details.howto summary{ cursor:pointer; font-weight:800; font-size:.9rem; padding:12px 14px; }
+      details.howto .body{ padding:0 14px 14px; font-size:.86rem; line-height:1.6; }
+      details.howto ol{ margin:6px 0; padding-left:20px; }
+      details.howto li{ margin-bottom:5px; }
+
+      /* ---------- Overlays ---------- */
+      .overlay{
+        position:fixed; inset:0; background:rgba(6,12,18,.72); display:none;
+        align-items:center; justify-content:center; padding:16px; z-index:50;
+      }
+      .overlay.show{ display:flex; }
+      .sheet{
+        background:var(--panel); color:var(--ink); border-radius:16px; max-width:560px; width:100%;
+        max-height:92vh; overflow:auto; padding:24px 24px 20px; box-shadow:0 24px 60px rgba(0,0,0,.4);
+        border-top:6px solid var(--amber);
+      }
+      .sheet h1{ margin:0 0 4px; font-size:1.45rem; font-weight:800; letter-spacing:-.01em; }
+      .sheet .lead{ color:var(--muted); font-size:.92rem; line-height:1.55; margin:0 0 14px; }
+      .sheet ol{ padding-left:20px; font-size:.9rem; line-height:1.6; margin:8px 0 14px; }
+      .sheet li{ margin-bottom:6px; }
+      .bigbtn{
+        appearance:none; border:0; cursor:pointer; width:100%; padding:13px; border-radius:11px;
+        background:var(--amber); color:#fff; font:800 1rem "IBM Plex Sans", sans-serif;
+      }
+      .bigbtn:hover{ filter:brightness(1.07); }
+      .endgrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:14px 0; }
+      .endgrid .cell{ background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:10px 13px; }
+      .endgrid .cell .k{ font-size:.66rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+      .endgrid .cell .v{ font-family:"IBM Plex Mono", monospace; font-size:1.3rem; font-weight:700; }
+      .grade{ font-size:2.6rem; font-weight:800; font-family:"IBM Plex Mono", monospace; color:var(--amber); text-align:center; line-height:1; }
+      .gradelabel{ text-align:center; color:var(--muted); font-weight:700; font-size:.8rem; margin-top:4px; }
+      .foot{ text-align:center; color:var(--muted); font-size:.74rem; margin-top:16px; font-weight:600; }
+
+      /* ---------- LANDSCAPE VERSION ---------- */
+      /* Tujuan: di HP / tablet nu diputer ka gigir, pandangan 3D jadi lega
+         (16:9 lega), HUD jadi bar ipis di luhur, GAPEKA + Log pindah ka
+         rel katuhu nu bisa di-scroll sorangan — teu kudu scroll ka handap
+         jauh siga versi potret. Di desktop lega oge sarua. */
+      .landscape-hint{
+        display:none; margin-top:10px; padding:9px 12px; border-radius:10px;
+        border:1px dashed var(--amber); background:var(--amber-bg); color:var(--ink);
+        font-size:.82rem; font-weight:600; line-height:1.45;
+      }
+      .landscape-hint.show{ display:block; }
+      .landscape-hint b{ color:var(--amber); }
+
+      /* Paksa landscape: dipake ku tombol "Landscape" + otomatis mun
+         alatna geus landscape. Kelasna dipasang di <body>. */
+      body.is-landscape .wrap{ max-width:none; padding:10px 12px 18px; }
+      body.is-landscape .grid{ grid-template-columns:minmax(0,1fr) 360px; gap:12px; margin-top:10px; }
+      body.is-landscape #board3d{ aspect-ratio:16/7.6; }
+      body.is-landscape .hud{ flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; }
+      body.is-landscape .hud::-webkit-scrollbar{ display:none; }
+      body.is-landscape .hud .stat{ flex:1 1 0; min-width:96px; }
+      body.is-landscape .hud .tools{ flex:none; flex-wrap:nowrap; }
+      body.is-landscape .controls{ grid-template-columns:1fr 1fr 1.35fr; }
+      body.is-landscape .controls .ctl:last-child{ grid-column:auto !important; }
+      body.is-landscape .siggrid{ grid-template-columns:1fr 1fr; }
+      body.is-landscape .rightcol{ position:sticky; top:10px; max-height:calc(100dvh - 20px); overflow:auto; padding-right:2px; scrollbar-width:thin; }
+      body.is-landscape .rightcol .loglist{ max-height:260px; }
+
+      @media (orientation: landscape){
+        .wrap{ max-width:none; padding:10px 12px 22px; }
+        .grid{ grid-template-columns:minmax(0,1fr) 360px; gap:12px; margin-top:10px; }
+        #board3d{ aspect-ratio:16/7.8; }
+        .hud{ padding:8px; gap:6px; }
+        .hud .stat{ padding:6px 10px 7px; }
+        .hud .stat .v{ font-size:1.16rem; }
+        .controls{ grid-template-columns:1fr 1fr 1.35fr; }
+        .controls .ctl:last-child{ grid-column:auto !important; }
+        .rightcol{ position:sticky; top:10px; max-height:calc(100dvh - 20px); overflow:auto; scrollbar-width:thin; }
+      }
+      /* HP landscape: jangkungna pondok pisan — sagalana kudu muat salayar */
+      @media (orientation: landscape) and (max-height:560px){
+        .wrap{ padding:6px 8px 14px; }
+        .hud{ flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; padding:6px; }
+        .hud::-webkit-scrollbar{ display:none; }
+        .hud .stat{ flex:0 0 auto; min-width:84px; padding:4px 9px 5px; }
+        .hud .stat .k{ font-size:.58rem; }
+        .hud .stat .v{ font-size:1rem; }
+        .hud .tools{ flex:none; flex-wrap:nowrap; }
+        .tbtn{ padding:5px 9px; font-size:.78rem; white-space:nowrap; }
+        .grid{ margin-top:8px; gap:8px; grid-template-columns:minmax(0,1fr) 302px; }
+        .card .chead{ padding:7px 10px; }
+        .card .chead h2{ font-size:.84rem; }
+        .card .chead .sub{ font-size:.68rem; }
+        #board3d{ aspect-ratio:auto; height:calc(100dvh - 148px); min-height:250px; }
+        body.is-landscape #board3d{ aspect-ratio:auto; height:calc(100dvh - 148px); }
+        .legend{ padding:6px 10px 8px; font-size:.7rem; gap:4px 10px; }
+        .controls{ padding:8px 10px 2px; gap:8px; }
+        .selbox{ margin:8px 10px 10px; padding:8px 10px; }
+        .loglist{ max-height:170px; }
+        details.howto{ margin-top:8px; }
+        .foot{ margin-top:8px; }
+      }
+      @media (orientation: landscape) and (max-width:860px){
+        .grid{ grid-template-columns:minmax(0,1fr) 280px; }
+        body.is-landscape .grid{ grid-template-columns:minmax(0,1fr) 280px; }
+        .controls{ grid-template-columns:1fr 1fr; }
+        body.is-landscape .controls{ grid-template-columns:1fr 1fr; }
+        .controls .ctl:last-child{ grid-column:1/-1 !important; }
+        body.is-landscape .controls .ctl:last-child{ grid-column:1/-1 !important; }
+      }
+      /* Mun landscape dipaksa tapi alatna masih potret, board tetep lega
+         tur parentah muter ditembongkeun ku JS (kelas .show). */
+      body.is-landscape:not(.is-wide) #board3d{ aspect-ratio:16/9; }
+      @media (max-width:700px) and (orientation: portrait){
+        body.is-landscape .grid{ grid-template-columns:1fr; }
+        body.is-landscape .controls{ grid-template-columns:1fr; }
+        body.is-landscape .controls .ctl:last-child{ grid-column:1/-1 !important; }
+        body.is-landscape .rightcol{ position:static; max-height:none; overflow:visible; }
+        body.is-landscape .hud{ flex-wrap:wrap; overflow-x:visible; }
+        body.is-landscape .hud .tools{ flex-wrap:wrap; }
+      }
+
+      /* ---------- LANDSCAPE DIPUTER 90° (fallback) ---------- */
+      /* Akar masalah "teu landscape": halamanna hirup di jero iframe/webview
+         nu ngonci orientasi potret — screen.orientation.lock jeung rotasi
+         fisik teu boga pangaruh ti jero iframe. Jadi mun Landscape dipencet
+         tapi viewport masih potret, sakabeh tampilan diputer 90° ku CSS:
+         rubakna make jangkung layar (100dvh), luhurna make rubak layar
+         (100dvw). Puter HP ka gigir, tampilanana geus landscape beneran.
+         Mun alatna sorangan jadi landscape (viewport lega), kelas .is-rotated
+         dicabut ku JS sarta balik ka landscape biasa. */
+      body.is-rotated{ overflow:hidden; height:100dvh; }
+      body.is-rotated .wrap{
+        position:fixed; top:0; left:0; z-index:5;
+        width:100dvh; height:100dvw; max-width:none;
+        margin:0; padding:8px 10px 14px;
+        background:var(--bg);
+        transform-origin:0 0; transform:rotate(90deg) translateY(-100%);
+        overflow-y:auto; overflow-x:hidden;
+        -webkit-overflow-scrolling:touch;
+      }
+      body.is-rotated.is-landscape .grid{ grid-template-columns:minmax(0,1fr) 296px; gap:10px; margin-top:8px; }
+      body.is-rotated.is-landscape .hud{ flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; padding:7px; gap:6px; }
+      body.is-rotated.is-landscape .hud::-webkit-scrollbar{ display:none; }
+      body.is-rotated.is-landscape .hud .stat{ flex:0 0 auto; min-width:82px; padding:4px 9px 5px; }
+      body.is-rotated.is-landscape .hud .stat .k{ font-size:.58rem; }
+      body.is-rotated.is-landscape .hud .stat .v{ font-size:1rem; }
+      body.is-rotated.is-landscape .hud .tools{ flex:none; flex-wrap:nowrap; }
+      body.is-rotated .tbtn{ padding:5px 9px; font-size:.78rem; white-space:nowrap; }
+      body.is-rotated.is-landscape .card .chead{ padding:7px 10px; }
+      body.is-rotated.is-landscape .card .chead h2{ font-size:.84rem; }
+      body.is-rotated.is-landscape .card .chead .sub{ font-size:.68rem; }
+      body.is-rotated.is-landscape #board3d{ aspect-ratio:auto; height:calc(100dvw - 196px); min-height:215px; }
+      body.is-rotated.is-landscape .legend{ padding:6px 10px 8px; font-size:.7rem; gap:4px 10px; }
+      body.is-rotated.is-landscape .controls{ grid-template-columns:1fr 1fr; padding:8px 10px 2px; gap:8px; }
+      body.is-rotated.is-landscape .controls .ctl:last-child{ grid-column:1/-1 !important; }
+      body.is-rotated.is-landscape .siggrid{ grid-template-columns:1fr 1fr; }
+      body.is-rotated.is-landscape .selbox{ margin:8px 10px 10px; padding:8px 10px; }
+      body.is-rotated.is-landscape .rightcol{ position:sticky; top:8px; max-height:calc(100dvw - 16px); overflow:auto; scrollbar-width:thin; }
+      body.is-rotated .loglist{ max-height:170px; }
+      body.is-rotated details.howto{ margin-top:8px; }
+      body.is-rotated .foot{ margin-top:8px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+
+      <!-- HUD -->
+      <div class="hud" role="region" aria-label="Panel dinas PPKA">
+        <div class="stat"><div class="k">Jam Dinas</div><div class="v" id="hudClock">06:00</div></div>
+        <div class="stat"><div class="k">Skor</div><div class="v" id="hudScore">0</div></div>
+        <div class="stat"><div class="k">Kereta Selesai</div><div class="v"><span id="hudDone">0</span><small> / 8</small></div></div>
+        <div class="stat"><div class="k">Keselamatan</div><div class="v"><span id="hudSafe">100</span><small>%</small></div></div>
+        <div class="stat"><div class="k">Peringatan</div><div class="v" id="hudWarn">0</div></div>
+        <div class="tools">
+          <button class="tbtn" id="btnPause" type="button">⏸ Jeda</button>
+          <button class="tbtn spd on" type="button" data-speed="1">1×</button>
+          <button class="tbtn spd" type="button" data-speed="2">2×</button>
+          <button class="tbtn spd" type="button" data-speed="4">4×</button>
+          <button class="tbtn on" id="btnSound" type="button" aria-label="Suara">🔊 Suara</button>
+          <button class="tbtn" id="btnRestart" type="button">↻ Ulangi</button>
+          <button class="tbtn" id="btnLandscape" type="button" aria-pressed="false" title="Mode landscape — pandangan lega, kontrol di gigir">▭ Landscape</button>
+          <button class="tbtn" id="btnFull" type="button" title="Layar penuh">⛶ Penuh</button>
+        </div>
+      </div>
+
+      <div class="landscape-hint" id="landscapeHint" role="status">Mode <b>Landscape</b> aktif — tampilanana geus <b>diputer 90°</b>, jadi <b>puter HP ka gigir</b> ayeuna: pandangan 3D-na lega sarta GAPEKA aya di sisi katuhu. Panel katuhu bisa di-scroll sorangan tanpa ngaganggu pandangan rel.</div>
+
+      <div class="grid">
+        <!-- LEFT: board + controls -->
+        <div>
+          <section class="card">
+            <div class="chead">
+              <h2>Stasiun Sukamaju — Pandangan 3D Realistis · Landscape</h2>
+              <span class="sub">Versi landscape: pandangan lega 16:9 · 3 jalur · lokomotif CC + gerbong KAI · kanopi penuh · gedong Pintu Utara · GAPEKA di sisi katuhu</span>
+            </div>
+            <div class="boardwrap">
+              <div id="board3d" role="img" aria-label="Pandangan 3D Stasiun Sukamaju: rel, peron, sinyal, dan kereta"></div>
+              <div class="viewbar" role="group" aria-label="Sudut kamera">
+                <button type="button" data-view="bebas" class="on">🎥 Bebas</button>
+                <button type="button" data-view="atas">⬒ Dari Atas</button>
+                <button type="button" data-view="peron">🚉 Dari Peron</button>
+                <button type="button" data-view="samping">🚆 Samping Rel</button>
+              </div>
+              <div class="camhint">Seret = putar · Scroll / cubit = zoom · Klik kereta, wesel, sinyal untuk mengatur</div>
+              <div class="eventbanner" id="eventBanner"></div>
+            </div>
+            <div class="legend">
+              <span><span class="dot" style="background:#e85d04"></span>KA Penumpang — lokomotif + 5 gerbong KAI, penumpang terlihat di jendela</span>
+              <span><span class="dot" style="background:#c0392b"></span>KA Lokal / Komuter — rangkaian perak garis merah-kuning</span>
+              <span><span class="dot" style="background:#1f6f8b"></span>KA Barang — kontainer warna-warni</span>
+              <span><span class="dot" style="background:#2fbf5a"></span>Sinyal jalan</span>
+              <span><span class="dot" style="background:#e0483e"></span>Sinyal berhenti / jalur terisi</span>
+              <span>Di peron ada penumpang menunggu, duduk di bangku, berjalan, dan bergegas naik saat kereta berhenti (dwell). Masinis terlihat di kabin lokomotif. Klik kereta, wesel, atau sinyal langsung di pandangan 3D untuk mengatur.</span>
+              <span>Peron paling ujung sisi utara (peuntas Jalur 1) kini diisi gedung stasiun kedua — Pintu Utara — dengan loket, ruang tunggu, dan teras beratap.</span>
+            </div>
+
+            <div class="controls">
+              <div class="ctl">
+                <h3>Wesel Barat (W1) <span class="locktag" id="lockW"></span></h3>
+                <div class="seg" id="segW" role="group" aria-label="Wesel barat"></div>
+              </div>
+              <div class="ctl">
+                <h3>Wesel Timur (W2) <span class="locktag" id="lockE"></span></h3>
+                <div class="seg" id="segE" role="group" aria-label="Wesel timur"></div>
+              </div>
+              <div class="ctl" style="grid-column:1/-1">
+                <h3>Sinyal — klik untuk membuka / menutup</h3>
+                <div class="siggrid" id="sigGrid"></div>
+              </div>
+            </div>
+
+            <div class="selbox" id="selBox">
+              <div class="t" id="selTitle">Belum ada kereta dipilih</div>
+              <p id="selHint">Klik kereta di panel jalur atau baris di jadwal GAPEKA. Panel ini akan memberi tahu langkah berikutnya: wesel ke jalur mana, sinyal mana yang dibuka.</p>
+            </div>
+          </section>
+
+          <details class="howto card">
+            <summary>Cara main &amp; aturan keselamatan</summary>
+            <div class="body">
+              <ol>
+                <li><strong>Kamera 3D:</strong> seret untuk memutar, scroll atau cubit untuk zoom. Pakai tombol Bebas / Dari Atas / Dari Peron / Samping Rel untuk sudut cepat. Klik kereta, tiang sinyal, atau penanda wesel W1/W2 langsung di dunia 3D — sama seperti tombol di bawahnya.</li>
+                <li><strong>Terima kereta:</strong> kereta mendekat dari barat (→ ke timur) atau timur (← ke barat) dan berhenti di sinyal masuk kalau sinyalnya merah.</li>
+                <li><strong>Atur wesel</strong> sisi kedatangan ke jalur tujuan (ikuti <em>rencana jalur</em> di GAPEKA untuk poin bonus), pastikan jalur itu kosong.</li>
+                <li><strong>Buka sinyal masuk</strong> — sistem interlocking menolak kalau jalur terisi, tertutup, atau wesel terkunci; penolakan tercatat sebagai peringatan.</li>
+                <li><strong>Berangkatkan:</strong> setelah naik-turun penumpang selesai, atur wesel sisi keberangkatan ke jalur kereta itu, lalu buka sinyal keluar. KA barang langsung melintas — siapkan rute keluarnya sebelum ia tiba di tengah stasiun supaya tidak berhenti.</li>
+                <li><strong>Skor:</strong> +100 per kereta berangkat, +25 bila jalur sesuai rencana, +10 bila tepat waktu (telat ≤ 5 menit). Setiap menit keterlambatan mengurangi poin.</li>
+                <li>Wesel <strong>terkunci otomatis</strong> selama ada kereta melintasinya — jangan panik, tunggu sampai kereta lewat.</li>
+              </ol>
+            </div>
+          </details>
+        </div>
+
+        <!-- RIGHT: timetable + log -->
+        <div class="rightcol">
+          <section class="card">
+            <div class="chead"><h2>GAPEKA — Jadwal Dinas</h2><span class="sub">06:00–12:00</span></div>
+            <div id="ttBody"></div>
+          </section>
+
+          <section class="card" style="margin-top:14px">
+            <div class="chead"><h2>Log Perjalanan</h2><span class="sub">warta PPKA</span></div>
+            <ul class="loglist" id="logList"></ul>
+          </section>
+        </div>
+      </div>
+
+      <p class="foot">Prototipe simulasi PPKA · Stasiun Sukamaju (fiktif) · 1 detik permainan = 1 menit waktu dinas</p>
+    </div>
+
+    <!-- START OVERLAY -->
+    <div class="overlay show" id="overlayStart">
+      <div class="sheet">
+        <h1>Dinas PPKA — Stasiun Sukamaju</h1>
+        <p class="lead">Anda bertugas sebagai <strong>PPKA (Pengatur Perjalanan Kereta Api)</strong> di Stasiun Sukamaju — kini tampil <strong>3D realistis</strong>: gedung stasiun bergaya KAI dengan papan keberangkatan &amp; jam stasiun, peron beratap <strong>kanopi baja sapanjang peron</strong> — tiang tengah, rangka truss, strip skylight, lis oranye KAI, plus kanopi di depan pintu masuk — ditambah <strong>gedung stasiun kedua di peron paling ujung sisi utara (Pintu Utara)</strong> yang sebelumnya kosong, lengkap dengan loket, ruang tunggu, dan teras beratap di depannya — dengan bangku, garis taktil kuning, dan puluhan <strong>penumpang</strong> yang menunggu, duduk, berjalan, dan bergegas naik saat kereta berhenti. Keretanya pun realistis: <strong>lokomotif dengan masinis di kabin, 5 gerbong penumpang bergaris oranye KAI dengan penumpang terlihat di setiap jendela</strong>, bogie &amp; roda, sampai KA barang kontainer. Ada <strong>8 kereta</strong> di GAPEKA hari ini — atur wesel dan sinyal supaya semua aman dan tepat waktu. Kamera bisa diputar dan di-zoom.</p>
+        <ol>
+          <li>Kereta berhenti di <strong>sinyal masuk</strong> yang merah — atur <strong>wesel</strong> ke jalur rencana, lalu buka sinyalnya.</li>
+          <li>Setelah penumpang naik-turun, atur wesel sisi keluar ke jalur kereta itu dan buka <strong>sinyal keluar</strong>.</li>
+          <li>Interlocking menjaga keselamatan: sinyal menolak dibuka ke jalur yang terisi. Penolakan = peringatan.</li>
+          <li>Pertengahan dinas ada <strong>pemeriksaan wesel di Jalur 3</strong> — siap-siap mengalihkan kereta ke jalur lain.</li>
+        </ol>
+        <button class="bigbtn" id="btnStart" type="button">Mulai Dinas</button>
+      </div>
+    </div>
+
+    <!-- END OVERLAY -->
+    <div class="overlay" id="overlayEnd">
+      <div class="sheet">
+        <h1>Dinas Selesai</h1>
+        <p class="lead" id="endLead">Semua kereta sudah dilayani.</p>
+        <div class="grade" id="endGrade">A</div>
+        <div class="gradelabel" id="endGradeLabel">Nilai dinas</div>
+        <div class="endgrid">
+          <div class="cell"><div class="k">Skor akhir</div><div class="v" id="endScore">0</div></div>
+          <div class="cell"><div class="k">Tepat waktu</div><div class="v" id="endOnTime">0/8</div></div>
+          <div class="cell"><div class="k">Rata-rata telat</div><div class="v" id="endAvgDelay">0 mnt</div></div>
+          <div class="cell"><div class="k">Peringatan</div><div class="v" id="endWarn">0</div></div>
+        </div>
+        <button class="bigbtn" id="btnAgain" type="button">Dinas Lagi</button>
+      </div>
+    </div>
+
+    <script>
+    "use strict";
+    /* ================= DATA ================= */
+    var TRACK_Y = {1:118, 2:218, 3:318};
+    var MAIN_Y = 218;
+    var TRAINS = [
+      { id:"712",  name:"Lokal Sukamaju",  type:"lok", dir: 1, spawn:5,   planned:1, dwell:20, from:"Bandung",   to:"Cicalengka" },
+      { id:"88",   name:"Fajar Utama",     type:"pen", dir:-1, spawn:50,  planned:2, dwell:25, from:"Yogyakarta",to:"Jakarta" },
+      { id:"301",  name:"Peti Kemas",      type:"bar", dir: 1, spawn:95,  planned:2, dwell:0,  from:"Jakarta",   to:"Surabaya" },
+      { id:"104",  name:"Sancaka",         type:"pen", dir: 1, spawn:140, planned:1, dwell:25, from:"Surabaya",  to:"Bandung" },
+      { id:"56",   name:"Turangga",        type:"pen", dir:-1, spawn:185, planned:3, dwell:25, from:"Bandung",   to:"Surabaya" },
+      { id:"402",  name:"Komuter Garut",   type:"lok", dir:-1, spawn:230, planned:1, dwell:20, from:"Garut",     to:"Bandung" },
+      { id:"9",    name:"Argo Parahyangan",type:"pen", dir: 1, spawn:275, planned:2, dwell:30, from:"Jakarta",   to:"Bandung" },
+      { id:"305",  name:"Barang Campuran", type:"bar", dir:-1, spawn:320, planned:2, dwell:0,  from:"Surabaya",  to:"Jakarta" }
+    ];
+    var TYPE_LABEL = { pen:"Penumpang", lok:"Lokal/Komuter", bar:"Barang" };
+    var TYPE_COLOR = { pen:"#c0392b", lok:"#2e8b57", bar:"#5b7a99" };
+    var SIG_DEFS = [
+      { key:"inW",  name:"Sinyal Masuk Barat",  sub:"kereta dari barat masuk stasiun" },
+      { key:"inE",  name:"Sinyal Masuk Timur",  sub:"kereta dari timur masuk stasiun" },
+      { key:"outW", name:"Sinyal Keluar Barat", sub:"berangkat ke arah barat" },
+      { key:"outE", name:"Sinyal Keluar Timur", sub:"berangkat ke arah timur" }
+    ];
+    var CLOSURE_FROM = 150, CLOSURE_TO = 240; /* Jalur 3 ditutup 08:30–10:00 */
+
+    /* ================= STATE ================= */
+    var G;
+    function freshTrain(d){
+      return { id:d.id, name:d.name, type:d.type, dir:d.dir, spawn:d.spawn, planned:d.planned,
+        dwellTotal:d.dwell, from:d.from, to:d.to,
+        state:"scheduled", x:0, y:MAIN_Y, track:0, dwellLeft:0, delay:0,
+        enterSide:null, exitSide:null, scored:false, complained:false,
+        schedDepart: d.spawn + 48 + d.dwell };
+    }
+    function resetGame(){
+      G = { t:0, running:false, ended:false, speed:1, score:0, warnings:0, safety:100,
+        completed:0, onTime:0, delaySum:0,
+        sw:{ W:2, E:2 }, sig:{ inW:false, inE:false, outW:false, outE:false },
+        closureAnnounced:false, closureEnded:false,
+        trains: TRAINS.map(freshTrain), selected:null, sound:true };
+      document.getElementById("logList").innerHTML = "";
+      document.getElementById("eventBanner").className = "eventbanner";
+      buildControls(); renderTT(); updateHUD(); draw();
+    }
+    function closureActive(){ return G.t >= CLOSURE_FROM && G.t < CLOSURE_TO; }
+
+    /* ================= HELPERS ================= */
+    function $(id){ return document.getElementById(id); }
+    function clockStr(t){
+      var m = 360 + Math.floor(t); var hh = Math.floor(m/60)%24, mm = m%60;
+      return (hh<10?"0":"")+hh+":"+(mm<10?"0":"")+mm;
+    }
+    function trainById(id){ for (var i=0;i<G.trains.length;i++) if (G.trains[i].id===id) return G.trains[i]; return null; }
+    function trackOccupant(track, except){
+      for (var i=0;i<G.trains.length;i++){ var tr=G.trains[i];
+        if (tr!==except && tr.track===track && ["entering","arriving","dwell","ready","exiting"].indexOf(tr.state)>=0) return tr; }
+      return null;
+    }
+    function switchLocked(side){
+      for (var i=0;i<G.trains.length;i++){ var tr=G.trains[i];
+        if (tr.state==="entering" && tr.enterSide===side) return tr;
+        if (tr.state==="exiting" && tr.exitSide===side) return tr; }
+      return null;
+    }
+    function zoneFree(side){ return !switchLocked(side); }
+    function entryTargetFree(side){
+      var target = G.sw[side];
+      if (closureActive() && target===3) return false;
+      return !trackOccupant(target, null);
+    }
+    function exitReady(tr){
+      var side = tr.dir===1 ? "E" : "W";
+      var sigKey = tr.dir===1 ? "outE" : "outW";
+      return G.sig[sigKey] && G.sw[side]===tr.track && zoneFree(side);
+    }
+    function addLog(kind, msg){
+      var ul = $("logList"); var li = document.createElement("li");
+      if (kind) li.className = kind;
+      var s = document.createElement("span"); s.className="lt"; s.textContent = clockStr(G.t);
+      var b = document.createElement("span"); b.textContent = msg;
+      li.appendChild(s); li.appendChild(b); ul.appendChild(li);
+      while (ul.children.length > 42) ul.removeChild(ul.firstChild);
+      ul.scrollTop = ul.scrollHeight;
+    }
+
+    /* ================= AUDIO ================= */
+    var AC = null;
+    function beep(freq, dur, type, delay){
+      if (!G || !G.sound) return;
+      try{
+        if (!AC) AC = new (window.AudioContext||window.webkitAudioContext)();
+        if (AC.state==="suspended") AC.resume();
+        var t0 = AC.currentTime + (delay||0);
+        var o = AC.createOscillator(), g = AC.createGain();
+        o.type = type||"sine"; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.12, t0); g.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+        o.connect(g); g.connect(AC.destination); o.start(t0); o.stop(t0+dur);
+      }catch(e){}
+    }
+    function sndOpen(){ beep(880,.12,"sine"); }
+    function sndClose(){ beep(420,.1,"sine"); }
+    function sndDeny(){ beep(160,.22,"square"); }
+    function sndDepart(){ beep(660,.12,"sine"); beep(990,.18,"sine",.13); }
+    function sndArrive(){ beep(520,.1,"sine"); beep(660,.14,"sine",.1); }
+
+    /* ================= CONTROLS ================= */
+    function buildControls(){
+      ["W","E"].forEach(function(side){
+        var seg = $("seg"+side); seg.innerHTML = "";
+        [1,2,3].forEach(function(n){
+          var b = document.createElement("button"); b.type="button";
+          b.dataset.side = side; b.dataset.track = n;
+          b.innerHTML = "Jalur "+n + ((closureActive() && n===3) ? '<span class="closed">DITUTUP</span>' : "");
+          b.addEventListener("click", function(){ setSwitch(side, n, b); });
+          seg.appendChild(b);
+        });
+      });
+      var grid = $("sigGrid"); grid.innerHTML = "";
+      SIG_DEFS.forEach(function(d){
+        var b = document.createElement("button"); b.type="button"; b.className="sigbtn"; b.id="sig_"+d.key;
+        b.innerHTML = '<span class="lamp"></span><span>'+d.name+'<small>'+d.sub+'</small></span><span class="st">BERHENTI</span>';
+        b.addEventListener("click", function(){ toggleSignal(d.key, b); });
+        grid.appendChild(b);
+      });
+      refreshControls();
+    }
+    function refreshControls(){
+      ["W","E"].forEach(function(side){
+        var seg = $("seg"+side); var locked = switchLocked(side);
+        for (var i=0;i<seg.children.length;i++){ var b=seg.children[i]; var n=+b.dataset.track;
+          b.classList.toggle("on", G.sw[side]===n);
+          b.disabled = !!locked;
+          var c = b.querySelector(".closed");
+          var shouldClose = closureActive() && n===3;
+          if (shouldClose && !c){ b.innerHTML = "Jalur "+n+'<span class="closed">DITUTUP</span>'; }
+          if (!shouldClose && c){ b.textContent = "Jalur "+n; }
+        }
+        $("lock"+side).textContent = locked ? "· terkunci (KA "+locked.id+" melintas)" : "";
+      });
+      SIG_DEFS.forEach(function(d){
+        var b = $("sig_"+d.key); if (!b) return;
+        b.classList.toggle("open", !!G.sig[d.key]);
+        b.querySelector(".st").textContent = G.sig[d.key] ? "JALAN" : "BERHENTI";
+      });
+    }
+    function deny(btn, msg){
+      G.warnings++; G.safety = Math.max(0, G.safety - 3);
+      addLog("warn", "⚠ Interlocking menolak: " + msg);
+      sndDeny();
+      if (btn){ btn.classList.remove("shake"); void btn.offsetWidth; btn.classList.add("shake"); }
+      updateHUD();
+    }
+    function setSwitch(side, n, btn){
+      if (switchLocked(side)){ deny(btn, "Wesel "+(side==="W"?"Barat":"Timur")+" terkunci, ada kereta melintas."); return; }
+      if (G.sw[side] === n) return;
+      G.sw[side] = n; beep(300,.06,"square");
+      addLog("", "Wesel "+(side==="W"?"Barat (W1)":"Timur (W2)")+" diarahkan ke Jalur "+n+".");
+      refreshControls(); draw();
+    }
+    function toggleSignal(key, btn){
+      if (G.sig[key]){ G.sig[key]=false; sndClose(); addLog("", sigName(key)+" ditutup."); refreshControls(); draw(); return; }
+      var side = (key==="inW"||key==="outW") ? "W" : "E";
+      if (key==="inW" || key==="inE"){
+        var target = G.sw[side];
+        if (switchLocked(side)) return deny(btn, "wesel sisi "+(side==="W"?"barat":"timur")+" sedang dipakai kereta melintas.");
+        if (closureActive() && target===3) return deny(btn, "Jalur 3 sedang ditutup untuk pemeriksaan wesel (s.d. "+clockStr(CLOSURE_TO)+"). Arahkan wesel ke jalur lain.");
+        var occ = trackOccupant(target, null);
+        if (occ) return deny(btn, "Jalur "+target+" masih terisi KA "+occ.id+" ("+occ.name+").");
+      } else {
+        var swTrack = G.sw[side];
+        var candidate = null;
+        for (var i=0;i<G.trains.length;i++){ var tr=G.trains[i];
+          if (tr.track===swTrack && (tr.state==="dwell"||tr.state==="ready"||tr.state==="arriving") &&
+              ((key==="outE" && tr.dir===1) || (key==="outW" && tr.dir===-1))) candidate = tr; }
+        if (!candidate) return deny(btn, "tidak ada kereta di Jalur "+swTrack+" yang siap berangkat ke arah ini. Atur wesel keluar ke jalur kereta yang akan berangkat.");
+        if (switchLocked(side)) return deny(btn, "wesel sisi "+(side==="W"?"barat":"timur")+" sedang dipakai kereta melintas.");
+      }
+      G.sig[key]=true; sndOpen();
+      addLog("ok", sigName(key)+" dibuka (aspek jalan).");
+      refreshControls(); draw();
+    }
+    function sigName(key){
+      for (var i=0;i<SIG_DEFS.length;i++) if (SIG_DEFS[i].key===key) return SIG_DEFS[i].name;
+      return key;
+    }
+
+    /* ================= SIMULATION ================= */
+    function spawnTrain(tr){
+      tr.state = "approach";
+      tr.x = tr.dir===1 ? -70 : 1070;
+      tr.y = MAIN_Y;
+      addLog("evt", "KA "+tr.id+" ("+tr.name+") mendekat dari "+(tr.dir===1?"barat":"timur")+" — rencana Jalur "+tr.planned+".");
+      if (!G.selected) selectTrain(tr.id);
+    }
+    function beginEntering(tr){
+      var side = tr.dir===1 ? "W" : "E";
+      tr.track = G.sw[side]; tr.enterSide = side; tr.state = "entering";
+      G.sig[side==="W" ? "inW" : "inE"] = false;
+      sndArrive();
+      addLog("ok", "KA "+tr.id+" masuk Stasiun Sukamaju, Jalur "+tr.track+(tr.track===tr.planned ? " (sesuai rencana)." : " (rencana Jalur "+tr.planned+")."));
+      refreshControls();
+    }
+    function beginExiting(tr){
+      var side = tr.dir===1 ? "E" : "W";
+      tr.exitSide = side; tr.state = "exiting";
+      G.sig[tr.dir===1 ? "outE" : "outW"] = false;
+      if (!tr.scored){
+        tr.scored = true;
+        tr.delay = Math.max(0, Math.round(G.t - tr.schedDepart));
+        var pts = 100 - Math.min(60, tr.delay);
+        var planOK = tr.track===tr.planned || (tr.planned===3 && closureActive());
+        if (planOK) pts += 25;
+        if (tr.delay<=5){ pts += 10; G.onTime++; }
+        G.score += pts; G.delaySum += tr.delay;
+        sndDepart();
+        addLog(tr.delay<=5 ? "ok" : "warn",
+          "KA "+tr.id+" berangkat dari Jalur "+tr.track+" — "+(tr.delay<=5 ? "tepat waktu" : "telat "+tr.delay+" menit")+", +"+pts+" poin.");
+      }
+      refreshControls();
+    }
+    function entryGo(tr){
+      var side = tr.dir===1 ? "W" : "E";
+      var sigOpen = G.sig[side==="W" ? "inW" : "inE"];
+      return sigOpen && zoneFree(side) && entryTargetFree(side);
+    }
+    function updateTrain(tr, dt){
+      var sp = dt; /* dt already scaled */
+      if (tr.state==="scheduled"){ if (G.t>=tr.spawn) spawnTrain(tr); return; }
+      if (tr.state==="done") return;
+
+      if (tr.state==="approach" || tr.state==="waiting"){
+        var stopX = tr.dir===1 ? 118 : 882;
+        if (tr.state==="approach"){
+          tr.x += tr.dir * 44 * sp;
+          if ((tr.dir===1 && tr.x>=stopX) || (tr.dir===-1 && tr.x<=stopX)){
+            tr.x = stopX; tr.state = "waiting";
+            addLog("", "KA "+tr.id+" berhenti di sinyal masuk "+(tr.dir===1?"barat":"timur")+", menunggu aspek jalan.");
+          }
+        }
+        if (tr.state==="waiting"){
+          if (entryGo(tr)) beginEntering(tr);
+          else if (!tr.complained && G.t - tr.spawn > 105){
+            tr.complained = true; G.safety = Math.max(0, G.safety-2);
+            addLog("warn", "Masinis KA "+tr.id+" menanyakan kepastian sinyal — kereta terlalu lama tertahan di sinyal masuk.");
+            updateHUD();
+          }
+        }
+        tr.y = MAIN_Y; return;
+      }
+
+      if (tr.state==="entering"){
+        tr.x += tr.dir * 34 * sp;
+        var a = tr.dir===1 ? 118 : 882, b = tr.dir===1 ? 330 : 670;
+        var p = Math.min(1, Math.max(0, (tr.x - a) / (b - a)));
+        tr.y = MAIN_Y + (TRACK_Y[tr.track] - MAIN_Y) * (p*p*(3-2*p));
+        if ((tr.dir===1 && tr.x>=b) || (tr.dir===-1 && tr.x<=b)){ tr.state="arriving"; tr.y = TRACK_Y[tr.track]; }
+        return;
+      }
+
+      if (tr.state==="arriving"){
+        tr.y = TRACK_Y[tr.track];
+        var stopFront = tr.dir===1 ? 655 : 345;
+        var checkX = tr.dir===1 ? 520 : 480;
+        if (tr.dwellTotal===0 && ((tr.dir===1 && tr.x>=checkX) || (tr.dir===-1 && tr.x<=checkX)) && exitReady(tr)){
+          beginExiting(tr); return;
+        }
+        tr.x += tr.dir * 42 * sp;
+        if ((tr.dir===1 && tr.x>=stopFront) || (tr.dir===-1 && tr.x<=stopFront)){
+          tr.x = stopFront;
+          if (tr.dwellTotal>0){
+            tr.state="dwell"; tr.dwellLeft = tr.dwellTotal;
+            addLog("", "KA "+tr.id+" berhenti di Jalur "+tr.track+" — naik-turun penumpang "+tr.dwellTotal+" menit.");
+          } else if (exitReady(tr)){ beginExiting(tr); }
+          else { tr.state="ready"; addLog("", "KA "+tr.id+" ("+tr.name+") siap melintas — tunggu sinyal keluar dibuka."); }
+        }
+        return;
+      }
+
+      if (tr.state==="dwell"){
+        tr.dwellLeft -= sp;
+        if (tr.dwellLeft<=0){
+          tr.state="ready";
+          addLog("evt", "KA "+tr.id+" selesai naik-turun penumpang di Jalur "+tr.track+", siap berangkat ke "+tr.to+".");
+          beep(740,.12,"sine");
+        }
+        return;
+      }
+
+      if (tr.state==="ready"){ if (exitReady(tr)) beginExiting(tr); return; }
+
+      if (tr.state==="exiting"){
+        tr.x += tr.dir * 52 * sp;
+        if (tr.dir===1){ var p1 = Math.min(1, Math.max(0,(tr.x-750)/150)); tr.y = TRACK_Y[tr.track] + (MAIN_Y-TRACK_Y[tr.track])*(p1*p1*(3-2*p1)); }
+        else { var p2 = Math.min(1, Math.max(0,(250-tr.x)/150)); tr.y = TRACK_Y[tr.track] + (MAIN_Y-TRACK_Y[tr.track])*(p2*p2*(3-2*p2)); }
+        if ((tr.dir===1 && tr.x>1130) || (tr.dir===-1 && tr.x<-130)){
+          tr.state="done"; G.completed++;
+          addLog("ok", "KA "+tr.id+" meninggalkan wilayah Stasiun Sukamaju menuju "+tr.to+". ("+G.completed+"/8)");
+          updateHUD();
+          if (G.completed>=8) endShift();
+        }
+        return;
+      }
+    }
+
+    function step(dt){
+      G.t += dt;
+      if (!G.closureAnnounced && G.t>=CLOSURE_FROM){
+        G.closureAnnounced = true;
+        var bn = $("eventBanner");
+        bn.textContent = "⚠ Jalur 3 ditutup — pemeriksaan wesel s.d. "+clockStr(CLOSURE_TO);
+        bn.classList.add("show");
+        addLog("evt", "Pengumuman: Jalur 3 ditutup untuk pemeriksaan wesel sampai "+clockStr(CLOSURE_TO)+". Alihkan kereta ke Jalur 1 atau 2.");
+        beep(196,.3,"square"); buildControls();
+      }
+      if (G.closureAnnounced && !G.closureEnded && G.t>=CLOSURE_TO){
+        G.closureEnded = true;
+        $("eventBanner").classList.remove("show");
+        addLog("ok", "Pemeriksaan selesai — Jalur 3 dibuka kembali.");
+        buildControls();
+      }
+      for (var i=0;i<G.trains.length;i++) updateTrain(G.trains[i], dt);
+    }
+
+    function endShift(){
+      G.ended = true; G.running = false;
+      var avg = G.trains.length ? Math.round(G.delaySum / G.trains.length) : 0;
+      var grade, label;
+      if (G.score>=980 && G.warnings<=2){ grade="A"; label="PPKA teladan — aman, lancar, tepat waktu."; }
+      else if (G.score>=860){ grade="B"; label="Dinas bagus — sedikit keterlambatan masih wajar."; }
+      else if (G.score>=700){ grade="C"; label="Dinas cukup — banyak kereta tertahan, perlu lebih sigap."; }
+      else { grade="D"; label="Dinas berat — jadwal berantakan. Coba lagi, atur wesel lebih awal."; }
+      $("endScore").textContent = G.score;
+      $("endOnTime").textContent = G.onTime + "/8";
+      $("endAvgDelay").textContent = avg + " mnt";
+      $("endWarn").textContent = G.warnings;
+      $("endGrade").textContent = grade;
+      $("endGradeLabel").textContent = label;
+      $("endLead").textContent = "Delapan kereta sudah dilayani di Stasiun Sukamaju. Keselamatan akhir "+G.safety+"%.";
+      $("overlayEnd").classList.add("show");
+      $("btnPause").textContent = "▶ Lanjut";
+    }
+
+    /* ================= UI UPDATES ================= */
+    function updateHUD(){
+      $("hudClock").textContent = clockStr(G.t);
+      $("hudScore").textContent = G.score;
+      $("hudDone").textContent = G.completed;
+      $("hudSafe").textContent = G.safety;
+      $("hudWarn").textContent = G.warnings;
+    }
+    function statusChip(tr){
+      switch(tr.state){
+        case "scheduled": return '<span class="chip wait">Terjadwal</span>';
+        case "approach": return '<span class="chip move">Mendekat</span>';
+        case "waiting": return '<span class="chip late">Tertahan sinyal</span>';
+        case "entering": return '<span class="chip move">Masuk stasiun</span>';
+        case "arriving": return '<span class="chip move">Menuju peron</span>';
+        case "dwell": return '<span class="chip stop">Naik-turun · '+Math.ceil(tr.dwellLeft)+' mnt</span>';
+        case "ready": return '<span class="chip stop">Siap berangkat</span>';
+        case "exiting": return '<span class="chip move">Berangkat</span>';
+        case "done": return tr.delay<=5 ? '<span class="chip done">Selesai · tepat waktu</span>' : '<span class="chip late">Selesai · telat '+tr.delay+' mnt</span>';
+      }
+      return "";
+    }
+    function renderTT(){
+      var html = "";
+      G.trains.forEach(function(tr){
+        html += '<button type="button" class="ttrow'+(G.selected===tr.id?" sel":"")+'" data-id="'+tr.id+'">'
+          + '<span class="tm">'+clockStr(tr.spawn)+'</span>'
+          + '<span><span class="nm">KA '+tr.id+' · '+tr.name+'</span><br>'
+          + '<span class="mt">'+tr.from+' '+(tr.dir===1?"→":"←")+' '+tr.to+' · Rencana Jalur '+tr.planned+(tr.dwellTotal===0?" · langsung":"")+'</span></span>'
+          + statusChip(tr) + '</button>';
+      });
+      $("ttBody").innerHTML = html;
+      var rows = $("ttBody").querySelectorAll(".ttrow");
+      for (var i=0;i<rows.length;i++) rows[i].addEventListener("click", function(){ selectTrain(this.dataset.id); });
+    }
+    function selectTrain(id){
+      G.selected = id;
+      var tr = trainById(id); if (!tr) return;
+      $("selTitle").innerHTML = "KA "+tr.id+" · "+tr.name+' &nbsp;<span class="badge '+(tr.type==="pen"?"pen":tr.type==="lok"?"lok":"bar")+'">'+TYPE_LABEL[tr.type]+"</span>";
+      renderTT(); updateHint(); draw();
+    }
+    function suggestedTrack(tr){
+      var side = tr.dir===1 ? "W" : "E";
+      if (!(closureActive() && tr.planned===3) && !trackOccupant(tr.planned, tr)) return tr.planned;
+      for (var n=1;n<=3;n++){ if (n===3 && closureActive()) continue; if (!trackOccupant(n, tr)) return n; }
+      return tr.planned;
+    }
+    function updateHint(){
+      var tr = G.selected ? trainById(G.selected) : null;
+      if (!tr) return;
+      var h = "";
+      var inSide = tr.dir===1 ? "Barat (W1)" : "Timur (W2)";
+      var outSide = tr.dir===1 ? "Timur (W2)" : "Barat (W1)";
+      var inSig = tr.dir===1 ? "Sinyal Masuk Barat" : "Sinyal Masuk Timur";
+      var outSig = tr.dir===1 ? "Sinyal Keluar Timur" : "Sinyal Keluar Barat";
+      switch(tr.state){
+        case "scheduled":
+          h = "Berangkat dari "+tr.from+" pukul "+clockStr(tr.spawn)+", rencana masuk Jalur "+tr.planned+". Siapkan wesel "+inSide+" dari sekarang."; break;
+        case "approach":
+          h = "Sedang mendekat. Atur Wesel "+inSide+" ke Jalur "+suggestedTrack(tr)+", lalu buka "+inSig+" sebelum ia berhenti terlalu lama."; break;
+        case "waiting":
+          h = "Tertahan di sinyal masuk! Atur Wesel "+inSide+" ke Jalur "+suggestedTrack(tr)+" (pastikan kosong), lalu buka "+inSig+"."; break;
+        case "entering": h = "Sedang masuk ke Jalur "+tr.track+". Wesel "+inSide+" terkunci sampai kereta lewat."; break;
+        case "arriving":
+          h = tr.dwellTotal===0
+            ? "KA barang melintas Jalur "+tr.track+". Cepat: atur Wesel "+outSide+" ke Jalur "+tr.track+" dan buka "+outSig+" supaya tidak perlu berhenti."
+            : "Sedang menuju peron Jalur "+tr.track+". Setelah berhenti, siapkan rute keluarnya."; break;
+        case "dwell":
+          h = "Naik-turun penumpang di Jalur "+tr.track+", sisa ±"+Math.ceil(tr.dwellLeft)+" menit. Siapkan Wesel "+outSide+" ke Jalur "+tr.track+"."; break;
+        case "ready":
+          h = "Siap berangkat dari Jalur "+tr.track+". Atur Wesel "+outSide+" ke Jalur "+tr.track+", lalu buka "+outSig+"."; break;
+        case "exiting": h = "Sedang berangkat ke "+tr.to+". Wesel "+outSide+" terkunci sampai kereta keluar wilayah stasiun."; break;
+        case "done": h = "Sudah tiba di lintas berikutnya menuju "+tr.to+". Keterlambatan akhir: "+tr.delay+" menit."; break;
+      }
+      $("selHint").textContent = h;
+    }
+
+    /* ================= 3D SCENE (Three.js) ================= */
+    var S3 = null;
+    function wx(x){ return (x - 500) / 9; }
+    function wz(y){ return (y - 218) * 0.11; }
+    function trackZ(n){ return (TRACK_Y[n] - 218) * 0.11; }
+    /* Track centreline in world X/Z. The main line is z=0; a station track
+       diverges from it through a smooth S-curve turnout between |x|=FAN_OUT
+       (main side) and |x|=FAN_IN (station side) on both ends of the station.
+       Every train unit samples this centreline at its own position, so each
+       locomotive / coach / wagon follows the rails through the switch
+       instead of the whole train sliding sideways as one rigid block. */
+    var FAN_OUT = 46, FAN_IN = 20;
+    function turnoutZ(xw, track){
+      if (!track) return 0;
+      var tz = trackZ(track);
+      if (!tz) return 0;
+      var ax = Math.abs(xw);
+      if (ax <= FAN_IN) return tz;
+      if (ax >= FAN_OUT) return 0;
+      var p = (ax - FAN_IN) / (FAN_OUT - FAN_IN);
+      var s = p * p * (3 - 2 * p);
+      return tz * (1 - s);
+    }
+    function turnoutYaw(xw, track, dir){
+      var d = 0.9;
+      var slope = (turnoutZ(xw + d, track) - turnoutZ(xw - d, track)) / (2 * d);
+      var a = Math.atan(slope);
+      return dir === 1 ? -a : Math.PI - a;
+    }
+    function stdMat(color, rough, metal, emissive, ei){
+      var m = new THREE.MeshStandardMaterial({ color: color, roughness: rough==null?0.85:rough, metalness: metal||0 });
+      if (emissive){ m.emissive = new THREE.Color(emissive); m.emissiveIntensity = ei==null?1:ei; }
+      return m;
+    }
+    function box(parent, w, h, d, x, y, z, mat, shadow){
+      var ms = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      ms.position.set(x, y, z);
+      if (shadow !== false){ ms.castShadow = true; ms.receiveShadow = true; }
+      parent.add(ms); return ms;
+    }
+    function segMesh(parent, x1, z1, x2, z2, w, h, y, mat){
+      var dx = x2 - x1, dz = z2 - z1;
+      var len = Math.sqrt(dx*dx + dz*dz);
+      var ms = new THREE.Mesh(new THREE.BoxGeometry(len, h, w), mat);
+      ms.position.set((x1+x2)/2, y, (z1+z2)/2);
+      ms.rotation.y = -Math.atan2(dz, dx);
+      ms.receiveShadow = true;
+      parent.add(ms); return ms;
+    }
+    function makeLabelSprite(w, h, scaleX, scaleY){
+      var c = document.createElement("canvas"); c.width = w; c.height = h;
+      var tex = new THREE.CanvasTexture(c); tex.minFilter = THREE.LinearFilter;
+      var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+      sp.scale.set(scaleX, scaleY, 1);
+      return { canvas: c, ctx: c.getContext("2d"), tex: tex, sprite: sp, last: "" };
+    }
+    function drawLabel(L, key, drawFn){
+      if (L.last === key) return; L.last = key; drawFn(L.ctx, L.canvas); L.tex.needsUpdate = true;
+    }
+    function pill(ctx, x, y, w, h, r, fill){
+      ctx.fillStyle = fill; ctx.beginPath();
+      ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r);
+      ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); ctx.fill();
+    }
+
+    function ensure3D(){
+      if (S3) return;
+      var container = document.getElementById("board3d");
+      if (!container) { S3 = { failed: true }; return; }
+      if (typeof THREE === "undefined"){
+        S3 = { failed: true };
+        container.innerHTML = '<div class="boardfallback">Pandangan 3D membutuhkan pustaka Three.js dari internet dan gagal dimuat. Periksa koneksi lalu muat ulang halaman — kontrol wesel &amp; sinyal di bawah tetap berfungsi.</div>';
+        return;
+      }
+      var scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x87bfe8);
+      scene.fog = new THREE.Fog(0xa8cbe8, 110, 210);
+      var camera = new THREE.PerspectiveCamera(50, 2, 0.1, 400);
+      var renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      if (renderer.outputEncoding !== undefined) renderer.outputEncoding = THREE.sRGBEncoding;
+      container.appendChild(renderer.domElement);
+
+      scene.add(new THREE.HemisphereLight(0xd6ecff, 0x4a5d3a, 1.05));
+      scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+      var sun = new THREE.DirectionalLight(0xfff6e0, 1.25);
+      sun.position.set(38, 52, 26); sun.castShadow = true;
+      sun.shadow.mapSize.set(2048, 2048);
+      sun.shadow.camera.left = -72; sun.shadow.camera.right = 72;
+      sun.shadow.camera.top = 55; sun.shadow.camera.bottom = -55;
+      sun.shadow.camera.far = 160; sun.shadow.bias = -0.0004;
+      scene.add(sun);
+      var fill = new THREE.DirectionalLight(0x9db8d6, 0.3); fill.position.set(-30, 24, -34); scene.add(fill);
+
+      var world = new THREE.Group(); scene.add(world);
+      /* ground + ballast - daylight realistic: grass, gravel ballast, concrete apron */
+      var ground = new THREE.Mesh(new THREE.PlaneGeometry(220, 110), stdMat(0x5a8a4a, 1, 0));
+      ground.rotation.x = -Math.PI/2; ground.position.y = -0.02; ground.receiveShadow = true; world.add(ground);
+      /* Ballast beds run UNDER each track only — dark gravel, so the sleepers
+         and steel rails stand out clearly. (Previously one wide concrete
+         apron slab covered the whole station floor and buried the track
+         beds: the sleepers sank into it and the pale rails vanished against
+         the pale concrete — the rails looked covered.) */
+      var ballastMat = stdMat(0x363e47, 1, 0);
+      box(world, 150, 0.5, 4.4, 0, 0.25, 0, ballastMat);
+      box(world, 96, 0.5, 4.4, 0, 0.25, trackZ(1), ballastMat);
+      box(world, 96, 0.5, 4.4, 0, 0.25, trackZ(3), ballastMat);
+      /* Concrete aprons only where there is NO track — under the platforms
+         and in front of the station building — never across the rails.
+         Track corridors (|z − trackZ| < 2.2) are left open over the ballast. */
+      var apronMat = stdMat(0x7d8a99, 1, 0);
+      [[-16.6, 6.8], [-5.5, 6.6], [5.5, 6.6], [16.6, 6.8]].forEach(function(ap){
+        box(world, 56, 0.55, ap[1], 0, 0.28, ap[0], apronMat);
+      });
+      box(world, 40, 0.55, 10, 0, 0.28, 21.5, apronMat); /* station building foundation */
+
+      var railMats = {}, switchBeds = { W:{}, E:{} };
+      [1,2,3].forEach(function(n){ railMats[n] = stdMat(0x8fa5ba, 0.38, 0.45); });
+      var mainRailMat = stdMat(0x8fa5ba, 0.38, 0.45);
+      var sleeperMat = stdMat(0x3b2e21, 1, 0);
+      function rails(x1, z1, x2, z2, mat){
+        var dx = x2-x1, dz = z2-z1, len = Math.sqrt(dx*dx+dz*dz) || 1;
+        var px = -dz/len * 0.75, pz = dx/len * 0.75;
+        /* Rails are deliberately chunky — 0.24 wide, top at y=0.87, well
+           above the sleeper tops (0.64) — and mid-grey rather than near-
+           white, so both rails read as continuous lines at phone distance
+           instead of blending into the pale ballast and aprons. */
+        segMesh(world, x1+px, z1+pz, x2+px, z2+pz, 0.24, 0.26, 0.74, mat);
+        segMesh(world, x1-px, z1-pz, x2-px, z2-pz, 0.24, 0.26, 0.74, mat);
+      }
+      var x;
+      [1,2,3].forEach(function(n){
+        var z = trackZ(n);
+        var lim = n === 2 ? 26 : FAN_IN;
+        for (x = -lim; x <= lim; x += 2) box(world, 0.9, 0.12, 2.5, x, 0.58, z, sleeperMat, false);
+        rails(-(n === 2 ? 27 : FAN_IN), z, (n === 2 ? 27 : FAN_IN), z, railMats[n]);
+      });
+      for (x = -66; x <= -28; x += 2) box(world, 0.9, 0.12, 2.5, x, 0.5, 0, sleeperMat, false);
+      for (x = 28; x <= 66; x += 2) box(world, 0.9, 0.12, 2.5, x, 0.5, 0, sleeperMat, false);
+      rails(-68, 0, -27, 0, mainRailMat); rails(27, 0, 68, 0, mainRailMat);
+      /* switch fans — drawn as segmented S-curves that match turnoutZ(),
+         the same centreline the train units follow, so wheels stay on rails */
+      [1,2,3].forEach(function(n){
+        if (n === 2){
+          var bw = segMesh(world, -37, 0, -26, 0, 2.7, 0.14, 0.6, stdMat(0x2c3d4c, 1, 0));
+          var be = segMesh(world, 26, 0, 37, 0, 2.7, 0.14, 0.6, stdMat(0x2c3d4c, 1, 0));
+          bw.material.emissive = new THREE.Color(0xe8a33d); bw.material.emissiveIntensity = 0;
+          be.material.emissive = new THREE.Color(0xe8a33d); be.material.emissiveIntensity = 0;
+          switchBeds.W[n] = bw; switchBeds.E[n] = be;
+          rails(-37, 0, -26, 0, railMats[n]); rails(26, 0, 37, 0, railMats[n]);
+          return;
+        }
+        ["W","E"].forEach(function(sd){
+          var bedMat = stdMat(0x2c3d4c, 1, 0);
+          bedMat.emissive = new THREE.Color(0xe8a33d); bedMat.emissiveIntensity = 0;
+          var sx = sd === "W" ? -1 : 1;
+          var steps = 10, i, f0, f1, x0, x1;
+          for (i = 0; i < steps; i++){
+            f0 = i / steps; f1 = (i + 1) / steps;
+            x0 = sx * (FAN_IN + (FAN_OUT - FAN_IN) * f0);
+            x1 = sx * (FAN_IN + (FAN_OUT - FAN_IN) * f1);
+            segMesh(world, x0, turnoutZ(x0, n), x1, turnoutZ(x1, n), 2.7, 0.14, 0.6, bedMat);
+            rails(x0, turnoutZ(x0, n), x1, turnoutZ(x1, n), railMats[n]);
+          }
+          switchBeds[sd][n] = { material: bedMat };
+          for (var ax = FAN_IN + 1.5; ax < FAN_OUT; ax += 2.4){
+            var fx = sx * ax, fz = turnoutZ(fx, n);
+            var sl = box(world, 0.9, 0.12, 2.5, fx, 0.52, fz, sleeperMat, false);
+            sl.rotation.y = -Math.atan((turnoutZ(fx + 0.8, n) - turnoutZ(fx - 0.8, n)) / 1.6);
+          }
+        });
+      });
+
+      /* platforms - concrete with tactile paving + white safety line */
+      var platMat = stdMat(0x8a95a5, 0.95, 0), platTop = stdMat(0xc2ccd6, 0.95, 0), edgeMat = stdMat(0xf5c518, 0.8, 0);
+      [-5.5, 5.5].forEach(function(z){
+        box(world, 44, 1.0, 4.6, 0, 1.0, z, platMat);
+        box(world, 44, 0.14, 4.8, 0, 1.56, z, platTop);
+        box(world, 44, 0.06, 0.35, 0, 1.66, z + (z < 0 ? 2.1 : -2.1), edgeMat, false);
+        box(world, 44, 0.04, 0.18, 0, 1.65, z + (z < 0 ? 1.65 : -1.65), stdMat(0xffffff, 0.9, 0), false);
+        // tactile bumps strip (small repeated blocks)
+        for (var tx = -21; tx <= 21; tx += 1.2) box(world, 0.55, 0.05, 0.28, tx, 1.66, z + (z < 0 ? 1.85 : -1.85), stdMat(0xeab308, 0.9, 0), false);
+      });
+      /* canopy over both perons — FULL-LENGTH steel canopy like KAI stations.
+         Extended at the user's request: previously a short 34-long rear strip,
+         now 42.5 long (the whole platform) and 6.4 wide, on central columns
+         with transverse trusses, longitudinal beams, corrugated roof, an
+         orange fascia on every edge, and a translucent skylight strip down
+         the middle so daylight still reaches the platform. The sides stay
+         fully open (platform top y≈1.6 to roof y≈5.7), so passengers on the
+         platform edge remain visible from the angled camera views. */
+      var postMat = stdMat(0x2f4a67, 0.6, 0.4);
+      var canopyMat = stdMat(0x3a5a80, 0.7, 0.25);
+      var canopyTrimMat = stdMat(0xe85d04, 0.7, 0.1);
+      var canopyBeamMat = stdMat(0x243a52, 0.6, 0.4);
+      var canopyRibMat = stdMat(0x2e4a68, 0.75, 0.2);
+      var skylightMat = new THREE.MeshStandardMaterial({ color: 0xbfe3ff, roughness: 0.2, metalness: 0.15, transparent: true, opacity: 0.55 });
+      [-5.5, 5.5].forEach(function(pz){
+        /* central columns along the middle of the platform */
+        [-20, -13.3, -6.6, 0, 6.6, 13.3, 20].forEach(function(px){
+          var post = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 4.1, 8), postMat);
+          post.position.set(px, 3.68, pz); post.castShadow = true; world.add(post);
+          box(world, 0.55, 0.18, 0.55, px, 1.72, pz, canopyBeamMat, false); /* column foot */
+          /* diagonal braces from the column head out to both eaves */
+          var br1 = box(world, 0.12, 2.9, 0.12, px, 4.95, pz - 1.05, postMat, false); br1.rotation.x = 0.72;
+          var br2 = box(world, 0.12, 2.9, 0.12, px, 4.95, pz + 1.05, postMat, false); br2.rotation.x = -0.72;
+          /* transverse truss beam under the roof at every column */
+          box(world, 0.18, 0.24, 6.4, px, 5.42, pz, canopyBeamMat, false);
+        });
+        /* longitudinal beams under both eaves + the ridge line */
+        box(world, 42.5, 0.2, 0.18, 0, 5.42, pz - 2.9, canopyBeamMat, false);
+        box(world, 42.5, 0.2, 0.18, 0, 5.42, pz + 2.9, canopyBeamMat, false);
+        box(world, 42.5, 0.18, 0.16, 0, 5.44, pz, canopyBeamMat, false);
+        /* main corrugated roof slab — full platform length & width */
+        box(world, 42.5, 0.22, 6.4, 0, 5.68, pz, canopyMat);
+        /* corrugation ribs across the roof */
+        for (var rx = -20; rx <= 20; rx += 2.5) box(world, 0.16, 0.06, 6.4, rx, 5.82, pz, canopyRibMat, false);
+        /* translucent skylight strip down the centre of the roof */
+        box(world, 42.5, 0.07, 1.15, 0, 5.83, pz, skylightMat, false);
+        box(world, 42.5, 0.16, 0.22, 0, 5.88, pz - 0.68, canopyBeamMat, false);
+        box(world, 42.5, 0.16, 0.22, 0, 5.88, pz + 0.68, canopyBeamMat, false);
+        /* orange KAI fascia on both long eaves and both short ends */
+        box(world, 42.5, 0.3, 0.16, 0, 5.6, pz - 3.22, canopyTrimMat, false);
+        box(world, 42.5, 0.3, 0.16, 0, 5.6, pz + 3.22, canopyTrimMat, false);
+        box(world, 0.16, 0.3, 6.4, -21.28, 5.6, pz, canopyTrimMat, false);
+        box(world, 0.16, 0.3, 6.4, 21.28, 5.6, pz, canopyTrimMat, false);
+      });
+      /* extra canopy in front of the station building — a covered drop-off
+         awning over the entrance, on four slim posts with the same orange trim */
+      [-11, 11].forEach(function(px){
+        var fp = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 3.7, 8), postMat);
+        fp.position.set(px, 2.4, 16.7); fp.castShadow = true; world.add(fp);
+      });
+      [-3.7, 3.7].forEach(function(px){
+        var fp2 = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 3.7, 8), postMat);
+        fp2.position.set(px, 2.4, 16.7); fp2.castShadow = true; world.add(fp2);
+      });
+      box(world, 26, 0.2, 3.4, 0, 4.32, 17.9, canopyMat);
+      box(world, 26, 0.26, 0.16, 0, 4.24, 16.22, canopyTrimMat, false);
+      box(world, 0.16, 0.26, 3.4, -13.05, 4.24, 17.9, canopyTrimMat, false);
+      box(world, 0.16, 0.26, 3.4, 13.05, 4.24, 17.9, canopyTrimMat, false);
+      box(world, 26, 0.18, 0.16, 0, 4.14, 17.9, canopyBeamMat, false);
+      [-12, 0, 12].forEach(function(px){ box(world, 2.6, 0.5, 0.6, px, 1.95, -5.5, stdMat(0x4a3826, 1, 0)); });
+      var peronLbl = makeLabelSprite(256, 64, 9, 2.25);
+      drawLabel(peronLbl, "p1", function(c2, cv2){
+        c2.clearRect(0,0,256,64); pill(c2, 28, 8, 200, 48, 12, "rgba(10,22,34,.82)");
+        c2.fillStyle = "#e8eef4"; c2.font = "800 26px 'IBM Plex Sans', sans-serif"; c2.textAlign = "center";
+        c2.fillText("PERON 1 · 2", 128, 42);
+      });
+      peronLbl.sprite.position.set(0, 6.4, -5.5); world.add(peronLbl.sprite);
+
+      /* station building (south side) - KAI style: white walls, orange trim, tiled roof */
+      var bld = new THREE.Group(); bld.position.set(0, 0, 21.5); world.add(bld);
+      box(bld, 25, 4.6, 5.5, 0, 2.85, 0, stdMat(0xf2ede4, 0.9, 0));
+      box(bld, 25, 0.55, 5.5, 0, 1.05, 0, stdMat(0xe85d04, 0.8, 0), false); // orange base trim
+      box(bld, 27, 0.5, 7.2, 0, 5.35, 0, stdMat(0x8b3a1a, 0.85, 0));
+      box(bld, 20, 0.9, 4.2, 0, 5.95, 0, stdMat(0x9c4522, 0.85, 0)); // upper roof tier
+      box(bld, 27, 0.35, 7.6, 0, 0.72, 0, stdMat(0x5d6f7f, 0.9, 0));
+      var winMat = stdMat(0xbfe3ff, 0.25, 0.3, 0xffe9a8, 0.25);
+      [-9,-5.5,5.5,9].forEach(function(px){ box(bld, 2.2, 1.5, 0.15, px, 2.9, -2.82, winMat, false); box(bld, 2.4, 0.14, 0.18, px, 3.72, -2.82, stdMat(0x2f4a67,0.7,0.2), false); });
+      box(bld, 2.4, 3.4, 0.18, 0, 2.25, -2.82, stdMat(0x1a3a5c, 0.7, 0.2), false);
+      box(bld, 3.2, 0.18, 1.2, 0, 3.95, -3.2, stdMat(0x2f4a67, 0.7, 0.2), false); // entrance canopy
+      // side wings: loket + ruang PPKA
+      box(bld, 6, 3.2, 4.5, -15.5, 2.15, 0, stdMat(0xf2ede4, 0.9, 0)); box(bld, 7, 0.4, 5.5, -15.5, 3.95, 0, stdMat(0x8b3a1a, 0.85, 0));
+      box(bld, 6, 3.2, 4.5, 15.5, 2.15, 0, stdMat(0xf2ede4, 0.9, 0)); box(bld, 7, 0.4, 5.5, 15.5, 3.95, 0, stdMat(0x8b3a1a, 0.85, 0));
+      var signC = document.createElement("canvas"); signC.width = 1024; signC.height = 128;
+      var sctx = signC.getContext("2d");
+      sctx.fillStyle = "#14232f"; sctx.fillRect(0,0,1024,128);
+      sctx.fillStyle = "#e8a33d"; sctx.fillRect(0,0,1024,10); sctx.fillRect(0,118,1024,10);
+      sctx.fillStyle = "#f2f6fa"; sctx.font = "800 62px 'IBM Plex Sans', sans-serif"; sctx.textAlign = "center";
+      sctx.fillText("STASIUN  SUKAMAJU", 512, 86);
+      var signTex = new THREE.CanvasTexture(signC);
+      var sign = new THREE.Mesh(new THREE.PlaneGeometry(21, 2.6), new THREE.MeshBasicMaterial({ map: signTex }));
+      sign.position.set(0, 6.9, -1.2); sign.rotation.y = Math.PI; bld.add(sign);
+      var signPost1 = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,2.2,8), postMat);
+      signPost1.position.set(-9, 5.9, -1.2); bld.add(signPost1);
+      var signPost2 = signPost1.clone(); signPost2.position.x = 9; bld.add(signPost2);
+
+      /* station building — NORTH side, on the farthest platform end.
+         The concrete apron beyond Jalur 1 (z ≈ -16.6) used to be a bare,
+         empty slab with no canopy and no building — at the user's request
+         ("isian gedong stasiun") it is now filled with a second station
+         building in the same KAI style as the main south building: white
+         walls, orange base trim, two-tier tiled roof, glazed front and
+         double doors facing Jalur 1, loket & waiting-room wings, a big
+         STASIUN SUKAMAJU sign facing the tracks, a covered forecourt
+         walkway on slim posts, benches and planters. It sits clear of the
+         Jalur 1 ballast (front face z=-15.75, ballast edge z=-13.2). */
+      box(world, 42, 0.55, 10, 0, 0.30, -18.5, apronMat); /* north foundation — top just above the old apron slab, so no coplanar flicker */
+      var nb = new THREE.Group(); nb.position.set(0, 0, -18.5); world.add(nb);
+      box(nb, 25, 4.6, 5.5, 0, 2.85, 0, stdMat(0xf2ede4, 0.9, 0));
+      box(nb, 25, 0.55, 5.5, 0, 1.05, 0, stdMat(0xe85d04, 0.8, 0), false); // orange base trim
+      box(nb, 27, 0.5, 7.2, 0, 5.35, 0, stdMat(0x8b3a1a, 0.85, 0));
+      box(nb, 20, 0.9, 4.2, 0, 5.95, 0, stdMat(0x9c4522, 0.85, 0)); // upper roof tier
+      box(nb, 27, 0.35, 7.6, 0, 0.72, 0, stdMat(0x5d6f7f, 0.9, 0));
+      var winMatN = stdMat(0xbfe3ff, 0.25, 0.3, 0xffe9a8, 0.25);
+      [-9,-5.5,5.5,9].forEach(function(px){ box(nb, 2.2, 1.5, 0.15, px, 2.9, 2.82, winMatN, false); box(nb, 2.4, 0.14, 0.18, px, 3.72, 2.82, stdMat(0x2f4a67,0.7,0.2), false); });
+      box(nb, 2.4, 3.4, 0.18, 0, 2.25, 2.82, stdMat(0x1a3a5c, 0.7, 0.2), false); // double entrance doors facing Jalur 1
+      box(nb, 0.12, 3.4, 0.2, 0, 2.25, 2.84, stdMat(0xe8a33d, 0.6, 0.3), false); // door centre mullion
+      box(nb, 3.2, 0.18, 1.2, 0, 3.95, 3.2, stdMat(0x2f4a67, 0.7, 0.2), false); // entrance awning
+      // side wings: loket utara + ruang tunggu utara, each with window + door on the track side
+      box(nb, 6, 3.2, 4.5, -15.5, 2.15, 0, stdMat(0xf2ede4, 0.9, 0)); box(nb, 7, 0.4, 5.5, -15.5, 3.95, 0, stdMat(0x8b3a1a, 0.85, 0));
+      box(nb, 6, 3.2, 4.5, 15.5, 2.15, 0, stdMat(0xf2ede4, 0.9, 0)); box(nb, 7, 0.4, 5.5, 15.5, 3.95, 0, stdMat(0x8b3a1a, 0.85, 0));
+      [-15.5, 15.5].forEach(function(px){ box(nb, 2.0, 1.3, 0.15, px, 2.6, 2.32, winMatN, false); box(nb, 1.6, 2.6, 0.15, px + (px < 0 ? 1.9 : -1.9), 1.85, 2.32, stdMat(0x1a3a5c, 0.7, 0.2), false); });
+      // STASIUN SUKAMAJU sign facing the tracks (+z side, so no flip)
+      var signC2 = document.createElement("canvas"); signC2.width = 1024; signC2.height = 128;
+      var sctx2 = signC2.getContext("2d");
+      sctx2.fillStyle = "#14232f"; sctx2.fillRect(0,0,1024,128);
+      sctx2.fillStyle = "#e8a33d"; sctx2.fillRect(0,0,1024,10); sctx2.fillRect(0,118,1024,10);
+      sctx2.fillStyle = "#f2f6fa"; sctx2.font = "800 62px 'IBM Plex Sans', sans-serif"; sctx2.textAlign = "center";
+      sctx2.fillText("STASIUN  SUKAMAJU", 512, 86);
+      var signTex2 = new THREE.CanvasTexture(signC2);
+      var sign2 = new THREE.Mesh(new THREE.PlaneGeometry(21, 2.6), new THREE.MeshBasicMaterial({ map: signTex2 }));
+      sign2.position.set(0, 6.9, 1.2); nb.add(sign2);
+      var signPostN1 = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,2.2,8), postMat);
+      signPostN1.position.set(-9, 5.9, 1.2); nb.add(signPostN1);
+      var signPostN2 = signPostN1.clone(); signPostN2.position.x = 9; nb.add(signPostN2);
+      /* covered walkway along the front of the north building, on slim posts with orange fascia */
+      [-10, -3.4, 3.4, 10].forEach(function(px){
+        var wp = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 3.4, 8), postMat);
+        wp.position.set(px, 2.32, -13.9); wp.castShadow = true; world.add(wp);
+      });
+      box(world, 24, 0.18, 2.0, 0, 4.05, -14.7, canopyMat);
+      box(world, 24, 0.24, 0.14, 0, 3.98, -13.72, canopyTrimMat, false);
+      box(world, 0.14, 0.24, 2.0, -12.05, 3.98, -14.7, canopyTrimMat, false);
+      box(world, 0.14, 0.24, 2.0, 12.05, 3.98, -14.7, canopyTrimMat, false);
+      /* benches + planters on the north forecourt */
+      [-8, 8].forEach(function(px){
+        box(world, 2.6, 0.5, 0.6, px, 0.83, -14.6, stdMat(0x4a3826, 1, 0));
+        box(world, 0.9, 0.45, 0.9, px + (px < 0 ? -3.4 : 3.4), 0.80, -14.8, stdMat(0xb8c4ce, 0.9, 0));
+        var nbush = new THREE.Mesh(new THREE.SphereGeometry(0.55, 8, 7), stdMat(0x2e7d32, 1, 0));
+        nbush.position.set(px + (px < 0 ? -3.4 : 3.4), 1.30, -14.8); world.add(nbush);
+      });
+      /* fence + gravel path behind the north building, mirroring the south side */
+      for (var nfx = -26; nfx <= 26; nfx += 2.2){ box(world, 0.08, 0.9, 0.08, nfx, 0.45, -24.2, stdMat(0x2f3e4e, 0.6, 0.4), false); }
+      box(world, 54, 0.06, 0.08, 0, 0.9, -24.2, stdMat(0x2f3e4e, 0.6, 0.4), false);
+      box(world, 54, 0.06, 0.08, 0, 0.4, -24.2, stdMat(0x2f3e4e, 0.6, 0.4), false);
+      box(world, 56, 0.06, 1.6, 0, 0.03, -24.9, stdMat(0x9aa48e, 1, 0), false);
+      /* PINTU UTARA label over the north entrance */
+      var northLbl = makeLabelSprite(512, 96, 10.5, 2.0);
+      drawLabel(northLbl, "pintu-utara", function(c2, cv2){
+        c2.clearRect(0,0,512,96); pill(c2, 86, 14, 340, 68, 12, "rgba(10,22,34,.85)");
+        c2.fillStyle = "#ffd98a"; c2.font = "800 34px 'IBM Plex Sans', sans-serif"; c2.textAlign = "center";
+        c2.fillText("PINTU UTARA", 256, 58);
+      });
+      northLbl.sprite.position.set(0, 5.15, -14.4); world.add(northLbl.sprite);
+
+      /* hills + trees + lamps */
+      /* Hills stay WELL clear of the station. A hill cone is a solid disc:
+         the old centre hill (radius 44 at z=-44) had its base reaching z=0,
+         so its slope physically buried Jalur 1 (z=-11) along the whole
+         straight section — the rails were under the hill mesh, which is why
+         they looked "covered" no matter what was done to the track bed.
+         Bases now end north of z=-24, clear of every track and apron. */
+      [[-58,-44,20,7],[58,-44,20,9],[0,-46,20,8]].forEach(function(h){
+        var hill = new THREE.Mesh(new THREE.ConeGeometry(h[2], h[3], 7), stdMat(0x1d3325, 1, 0));
+        hill.position.set(h[0], h[3]/2 - 0.2, h[1]); world.add(hill);
+      });
+      [[-46,17],[46,17],[-52,-14],[52,-14],[-30,26],[33,26]].forEach(function(t){
+        var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.3, 1.6, 7), stdMat(0x4a3826, 1, 0));
+        trunk.position.set(t[0], 0.8, t[1]); trunk.castShadow = true; world.add(trunk);
+        var fol = new THREE.Mesh(new THREE.ConeGeometry(1.9, 3.6, 8), stdMat(0x2e5d3a, 1, 0));
+        fol.position.set(t[0], 3.3, t[1]); fol.castShadow = true; world.add(fol);
+      });
+      var lampGlow = stdMat(0xffe9a8, 0.4, 0, 0xffca55, 1.4);
+      [[-24,-8],[24,-8],[-24,8],[24,8]].forEach(function(l){
+        var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 4.4, 7), postMat);
+        pole.position.set(l[0], 2.2, l[1]); world.add(pole);
+        var bulb = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), lampGlow);
+        bulb.position.set(l[0], 4.5, l[1]); world.add(bulb);
+      });
+      /* direction labels */
+      [["◀ BANDUNG / JAKARTA", -52, -9], ["SURABAYA / GARUT ▶", 52, -9]].forEach(function(t){
+        var L = makeLabelSprite(512, 64, 17, 2.1);
+        drawLabel(L, t[0], function(c2, cv2){
+          c2.clearRect(0,0,512,64); c2.fillStyle = "#8fa9bd"; c2.font = "700 30px 'IBM Plex Sans', sans-serif"; c2.textAlign = "center";
+          c2.fillText(t[0], 256, 42);
+        });
+        L.sprite.position.set(t[1], 3.4, t[2]); world.add(L.sprite);
+      });
+
+      var clickables = [];
+      /* signals */
+      var signalObjs = {};
+      function makeSignal(key, x, z, label){
+        box(world, 2.4, 0.55, 2.4, x, 0.28, z, apronMat); /* concrete pad — signals stand off the apron now */
+        var g = new THREE.Group(); g.position.set(x, 0.55, z); world.add(g);
+        var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 3.8, 8), postMat);
+        pole.position.y = 1.9; pole.castShadow = true; g.add(pole);
+        box(g, 1.15, 1.9, 0.55, 0, 4.15, 0, stdMat(0x1d3247, 0.6, 0.3));
+        var redMat = stdMat(0x551512, 0.4, 0, 0xe0483e, 1.6);
+        var grnMat = stdMat(0x12351c, 0.4, 0, 0x2fbf5a, 0.06);
+        var gLamp = new THREE.Mesh(new THREE.SphereGeometry(0.27, 12, 10), grnMat); gLamp.position.set(0, 4.55, -0.32); g.add(gLamp);
+        var rLamp = new THREE.Mesh(new THREE.SphereGeometry(0.27, 12, 10), redMat); rLamp.position.set(0, 3.78, -0.32); g.add(rLamp);
+        var L = makeLabelSprite(512, 64, 10.5, 1.3);
+        drawLabel(L, label, function(c2, cv2){
+          c2.clearRect(0,0,512,64); pill(c2, 56, 10, 400, 44, 10, "rgba(10,22,34,.8)");
+          c2.fillStyle = "#cfe0ee"; c2.font = "700 25px 'IBM Plex Mono', monospace"; c2.textAlign = "center";
+          c2.fillText(label, 256, 41);
+        });
+        L.sprite.position.set(0, 5.9, 0); g.add(L.sprite);
+        var hit = box(g, 2.6, 5.6, 2.6, 0, 2.6, 0, new THREE.MeshBasicMaterial({ visible: false }), false);
+        hit.userData = { kind: "sig", key: key }; clickables.push(hit);
+        signalObjs[key] = { redMat: redMat, grnMat: grnMat };
+      }
+      makeSignal("inW", -46, -3.4, "MASUK BARAT");
+      makeSignal("inE", 46, 3.4, "MASUK TIMUR");
+      makeSignal("outW", -28.5, 15.2, "KELUAR BARAT");
+      makeSignal("outE", 28.5, 15.2, "KELUAR TIMUR");
+
+      /* switch indicators */
+      var switchObjs = {};
+      function makeSwitch(side, x, z){
+        box(world, 2.6, 0.55, 2.6, x, 0.28, z, apronMat); /* concrete pad */
+        var g = new THREE.Group(); g.position.set(x, 0.55, z); world.add(g);
+        box(g, 1.5, 0.5, 1.5, 0, 0.25, 0, stdMat(0x44586c, 0.8, 0.2));
+        var post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.7, 8), postMat);
+        post.position.y = 1.3; g.add(post);
+        var diaMat = stdMat(0xe8a33d, 0.5, 0.2, 0xe8a33d, 0.35);
+        var dia = new THREE.Mesh(new THREE.OctahedronGeometry(0.62), diaMat);
+        dia.position.y = 2.5; dia.castShadow = true; g.add(dia);
+        var L = makeLabelSprite(512, 96, 10.5, 2.0);
+        L.sprite.position.set(0, 4.1, 0); g.add(L.sprite);
+        var hit = box(g, 3.0, 4.6, 3.0, 0, 2.2, 0, new THREE.MeshBasicMaterial({ visible: false }), false);
+        hit.userData = { kind: "sw", side: side }; clickables.push(hit);
+        switchObjs[side] = { dia: dia, diaMat: diaMat, label: L };
+      }
+      makeSwitch("W", -36, 7.5); makeSwitch("E", 36, 7.5);
+
+      /* closure barriers on Jalur 3 */
+      var closureGroup = new THREE.Group(); world.add(closureGroup);
+      [-14, 0, 14].forEach(function(bx){
+        box(closureGroup, 0.35, 2.0, 0.35, bx - 1.4, 1.55, trackZ(3), postMat);
+        box(closureGroup, 0.35, 2.0, 0.35, bx + 1.4, 1.55, trackZ(3), postMat);
+        var bar1 = box(closureGroup, 3.2, 0.32, 0.18, bx, 2.35, trackZ(3), stdMat(0xc22f2f, 0.6, 0), false);
+        bar1.rotation.z = 0.5;
+        var cone = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.1, 10), stdMat(0xd96c1e, 0.8, 0));
+        cone.position.set(bx, 1.1, trackZ(3) + 1.8); cone.castShadow = true; closureGroup.add(cone);
+      });
+      closureGroup.visible = false;
+
+      /* ===== REALISTIC STATION DETAILS + PASSENGERS ===== */
+      // Sky clouds - soft white puffs
+      var cloudMat = stdMat(0xffffff, 1, 0); cloudMat.transparent = true; cloudMat.opacity = 0.92;
+      [[-38,22,-52],[18,26,-58],[52,20,-48],[-12,24,-62]].forEach(function(cp){
+        var cl = new THREE.Group(); cl.position.set(cp[0], cp[1], cp[2]); world.add(cl);
+        [[0,0,0,3.2],[2.6,0.2,0.4,2.2],[-2.4,0.1,-0.2,2.0],[0.8,0.7,0,1.7]].forEach(function(s){
+          var sm = new THREE.Mesh(new THREE.SphereGeometry(s[3], 10, 8), cloudMat); sm.position.set(s[0], s[1], s[2]); sm.scale.y = 0.45; cl.add(sm);
+        });
+      });
+      // Platform furniture: benches, bins, planters, signs, clock, departure board
+      var benchWood = stdMat(0x7a4a22, 0.85, 0), benchIron = stdMat(0x2f3e4e, 0.6, 0.4);
+      function makeBench(x, z, flip){
+        var bg = new THREE.Group(); bg.position.set(x, 1.62, z); bg.rotation.y = flip ? Math.PI : 0; world.add(bg);
+        box(bg, 2.4, 0.09, 0.55, 0, 0.45, 0, benchWood); box(bg, 2.4, 0.09, 0.5, 0, 0.95, -0.28, benchWood);
+        box(bg, 0.12, 0.45, 0.55, -1.0, 0.22, 0, benchIron, false); box(bg, 0.12, 0.45, 0.55, 1.0, 0.22, 0, benchIron, false);
+      }
+      [-14,-4,6,15].forEach(function(bx){ makeBench(bx, -4.55, false); });
+      [-10,2,12].forEach(function(bx){ makeBench(bx, 4.55, true); });
+      // Bins + planters
+      [-18,18].forEach(function(bx){
+        var bin = new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.28,0.75,10), stdMat(0x1d7a3d,0.7,0.2)); bin.position.set(bx,2.0,-4.2); bin.castShadow=true; world.add(bin);
+        box(world, 0.9, 0.45, 0.9, bx+2.2, 1.85, -6.8, stdMat(0xb8c4ce,0.9,0));
+        var bush = new THREE.Mesh(new THREE.SphereGeometry(0.55,8,7), stdMat(0x2e7d32,1,0)); bush.position.set(bx+2.2,2.35,-6.8); world.add(bush);
+      });
+      // Hanging platform signs
+      function hangingSign(x, z, text, sub){
+        var sg = new THREE.Group(); sg.position.set(x, 0, z); world.add(sg);
+        var rod = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,1.0,6), benchIron); rod.position.y=4.35; sg.add(rod);
+        var L = makeLabelSprite(512, 112, 6.2, 1.35); drawLabel(L, text+sub, function(c2,cv2){ c2.clearRect(0,0,512,112); pill(c2,6,6,500,100,14,"#0f2a44"); c2.fillStyle="#fff"; c2.font="800 38px 'IBM Plex Sans',sans-serif"; c2.textAlign="center"; c2.fillText(text,256,48); c2.fillStyle="#ffcf6b"; c2.font="700 26px 'IBM Plex Sans',sans-serif"; c2.fillText(sub,256,84); });
+        L.sprite.position.y=3.75; sg.add(L.sprite);
+      }
+      hangingSign(-9,-5.5,"JALUR 1","Ke Bandung • Jakarta"); hangingSign(9,-5.5,"JALUR 2","Ke Surabaya • Garut");
+      hangingSign(0,5.5,"PERON 2","Ruang Tunggu • Keluar →");
+      // Departure board on Peron 1
+      (function(){
+        var bc = document.createElement("canvas"); bc.width=640; bc.height=320; var bx2=bc.getContext("2d");
+        bx2.fillStyle="#0b1622"; bx2.fillRect(0,0,640,320); bx2.fillStyle="#ffb020"; bx2.fillRect(0,0,640,52);
+        bx2.fillStyle="#0b1622"; bx2.font="800 28px monospace"; bx2.textAlign="left"; bx2.fillText("  KEBERANGKATAN — SUKAMAJU",10,36);
+        bx2.font="600 24px monospace"; var rows=[["06:05","LOKAL","BANDUNG","J1"],["06:50","FAJAR UTAMA","JAKARTA","J2"],["07:35","PETI KEMAS","SURABAYA","J2"],["08:20","SANCAKA","BANDUNG","J1"],["09:05","TURANGGA","SURABAYA","J3"]];
+        rows.forEach(function(r,i){ var y=92+i*42; bx2.fillStyle=i%2?"#12263a":"#0e1e30"; bx2.fillRect(0,y-28,640,38); bx2.fillStyle="#e6f0f8"; bx2.fillText(r[0],14,y); bx2.fillText(r[1],120,y); bx2.fillText(r[2],330,y); bx2.fillStyle="#7ee787"; bx2.fillText(r[3],570,y); });
+        var tex=new THREE.CanvasTexture(bc); var board=new THREE.Mesh(new THREE.PlaneGeometry(5.6,2.8), new THREE.MeshBasicMaterial({map:tex})); board.position.set(-16,3.1,-3.55); world.add(board);
+        box(world,5.8,3.0,0.18,-16,3.1,-3.68,stdMat(0x1a2a3a,0.7,0.2),false);
+      })();
+      // Station clock (double-sided disc)
+      (function(){
+        var cc=document.createElement("canvas"); cc.width=256; cc.height=256; var cx2=cc.getContext("2d");
+        cx2.fillStyle="#fff"; cx2.beginPath(); cx2.arc(128,128,122,0,7); cx2.fill(); cx2.strokeStyle="#14232f"; cx2.lineWidth=10; cx2.stroke();
+        cx2.fillStyle="#14232f"; cx2.font="800 28px sans-serif"; cx2.textAlign="center";
+        for(var h=1;h<=12;h++){ var a=h*Math.PI/6; cx2.fillText(String(h),128+Math.sin(a)*92,140-Math.cos(a)*92); }
+        cx2.strokeStyle="#14232f"; cx2.lineWidth=8; cx2.beginPath(); cx2.moveTo(128,128); cx2.lineTo(128+38,128-52); cx2.stroke(); cx2.lineWidth=6; cx2.beginPath(); cx2.moveTo(128,128); cx2.lineTo(128+62,128+18); cx2.stroke();
+        cx2.fillStyle="#c0392b"; cx2.beginPath(); cx2.arc(128,128,10,0,7); cx2.fill();
+        var tex=new THREE.CanvasTexture(cc); var cm=new THREE.MeshBasicMaterial({map:tex,transparent:true});
+        var d1=new THREE.Mesh(new THREE.CircleGeometry(0.85,24),cm); d1.position.set(0,4.6,18.55); d1.rotation.y=Math.PI; world.add(d1);
+        var pole2=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,1.2,8),benchIron); pole2.position.set(0,5.55,18.55); world.add(pole2);
+      })();
+      // Fence + road in front of station + extra greenery
+      for(var fx=-26; fx<=26; fx+=2.2){ box(world,0.08,0.9,0.08,fx,1.0,14.8,benchIron,false); }
+      box(world,54,0.06,0.08,0,1.45,14.8,benchIron,false); box(world,54,0.06,0.08,0,0.95,14.8,benchIron,false);
+      box(world,60,0.08,7,0,0.04,27,stdMat(0x3a3f45,1,0),false); // road
+      box(world,60,0.02,0.28,0,0.1,27,stdMat(0xf5f5f5,0.9,0),false);
+      // Catenary / signal wire poles along tracks
+      [-30,-10,10,30].forEach(function(px){ var p=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.13,6.2,8), stdMat(0x5a6b7a,0.6,0.5)); p.position.set(px,3.1,-9.2); p.castShadow=true; world.add(p); box(world,3.6,0.14,0.14,px,5.9,-7.8,stdMat(0x5a6b7a,0.6,0.5),false); });
+
+      /* --- Passengers: low-poly people with varied clothes --- */
+      var platformPassengers = [];
+      var skinTones=[0xf1c27d,0xe0ac69,0xc68642,0x8d5524,0xffdbac];
+      var shirtCols=[0xc0392b,0x2471a3,0x1e8449,0xf39c12,0x7d3c98,0xecf0f1,0x16a085,0xe67e22,0x2c3e50,0xd35400,0x2980b9,0xc2185b];
+      var pantsCols=[0x2c3e50,0x34495e,0x1a1a2e,0x4a3728,0x555555,0x1f3a5f];
+      function makePerson(shirt, pants, skin, opts){
+        opts=opts||{}; var pg=new THREE.Group();
+        var sm=stdMat(shirt,0.9,0), pm=stdMat(pants,0.95,0), skm=stdMat(skin,0.75,0);
+        // legs
+        var legL=box(pg,0.16,0.52,0.18,-0.11,0.26,0,pm,false); var legR=box(pg,0.16,0.52,0.18,0.11,0.26,0,pm,false);
+        // torso - slightly tapered via box + shoulders
+        box(pg,0.52,0.62,0.30,0,0.83,0,sm);
+        // arms
+        var armL=box(pg,0.13,0.52,0.15,-0.33,0.82,0,sm,false); var armR=box(pg,0.13,0.52,0.15,0.33,0.82,0,sm,false);
+        armL.rotation.z=0.12; armR.rotation.z=-0.12;
+        // head + hair
+        var head=new THREE.Mesh(new THREE.SphereGeometry(0.19,12,10),skm); head.position.y=1.32; head.castShadow=true; pg.add(head);
+        var hair=new THREE.Mesh(new THREE.SphereGeometry(0.195,12,8,0,Math.PI*2,0,1.9),stdMat(opts.hair||0x1a1210,1,0)); hair.position.y=1.35; pg.add(hair);
+        if(opts.hijab){ var hj=new THREE.Mesh(new THREE.SphereGeometry(0.23,12,10),stdMat(opts.hijab,0.95,0)); hj.position.y=1.30; hj.scale.y=1.15; pg.add(hj); var face=new THREE.Mesh(new THREE.SphereGeometry(0.16,10,8),skm); face.position.set(0,1.30,0.08); pg.add(face); }
+        if(opts.bag){ box(pg,0.34,0.42,0.20,0.52,0.28,0,stdMat(opts.bag,0.8,0.1),false); }
+        if(opts.backpack){ box(pg,0.36,0.44,0.18,0,0.88,-0.26,stdMat(opts.backpack,0.85,0),false); }
+        pg.userData={legL:legL,legR:legR,armL:armL,armR:armR,head:head};
+        pg.scale.set(1.3,1.3,1.3); // slightly larger than life so people read at station scale
+        return pg;
+      }
+      function addPassenger(x,z,opts){
+        opts=opts||{}; var idx=platformPassengers.length;
+        var shirt=shirtCols[idx%shirtCols.length], pants=pantsCols[(idx*2)%pantsCols.length], skin=skinTones[idx%skinTones.length];
+        if(opts.shirt) shirt=opts.shirt;
+        var p=makePerson(shirt,pants,skin,opts); p.position.set(x,1.63,z); p.rotation.y=opts.ry||(Math.random()*0.8-0.4)+(z<0?0:Math.PI);
+        world.add(p);
+        platformPassengers.push({g:p, homeX:x, homeZ:z, phase:Math.random()*6.28, speed:0.6+Math.random()*0.7, mode:opts.mode||"stand", walkDir:Math.random()>0.5?1:-1, sit:!!opts.sit, baseY:1.63});
+        if(opts.sit){ p.position.y=1.70; p.scale.set(1.3,1.05,1.3); }
+        return p;
+      }
+      // Waiting crowds - Peron 1 (north, z=-5.5) and Peron 2 (south, z=+5.5)
+      // Everyone waits on the OPEN front strip of the platform (z ≈ ±3.8–4.5,
+      // beside the yellow line) — never under the canopy, so the crowd is
+      // visible from the default and top camera angles.
+      addPassenger(-13.8,-4.5,{sit:true}); addPassenger(-13.1,-4.5,{sit:true,hijab:0x7d3c98}); addPassenger(-3.9,-4.5,{sit:true}); addPassenger(6.1,-4.5,{sit:true,bag:0xc0392b});
+      addPassenger(-9,-4.05,{bag:0x2471a3}); addPassenger(-8.3,-4.25,{hijab:0xc2185b}); addPassenger(-1.5,-4.0,{backpack:0xe67e22}); addPassenger(3.2,-4.15,{bag:0x1e8449}); addPassenger(11,-4.0,{}); addPassenger(16.5,-4.2,{backpack:0x2c3e50}); addPassenger(-17,-4.05,{});
+      addPassenger(-9.9,4.5,{sit:true}); addPassenger(2.1,4.5,{sit:true}); addPassenger(12.1,4.5,{sit:true,hijab:0x16a085});
+      addPassenger(-5,4.05,{mode:"walk"}); addPassenger(7,4.0,{mode:"walk",hijab:0xf39c12}); addPassenger(14,4.15,{bag:0x7d3c98}); addPassenger(-14,4.05,{mode:"walk"});
+      addPassenger(-11,-4.05,{mode:"walk"}); addPassenger(13,-4.0,{mode:"walk",backpack:0xc0392b});
+      // Boarding queues along the platform edge — Peron 1 (north) & Peron 2 (south)
+      addPassenger(-6.6,-3.8,{bag:0x16a085}); addPassenger(-5.4,-3.8,{hijab:0x2471a3}); addPassenger(-4.2,-3.8,{backpack:0xf39c12}); addPassenger(1.8,-3.8,{}); addPassenger(3.0,-3.8,{bag:0xc2185b}); addPassenger(8.8,-3.8,{hijab:0xe67e22});
+      addPassenger(-2.8,3.8,{backpack:0x1e8449}); addPassenger(-1.6,3.8,{}); addPassenger(5.6,3.8,{bag:0x2471a3}); addPassenger(6.8,3.8,{hijab:0x7d3c98});
+      addPassenger(-19.5,-4.1,{}); addPassenger(19.8,4.1,{bag:0xd35400});
+      // Family group + porter + staff (orange vest / uniform)
+      addPassenger(4.6,-3.95,{shirt:0xecf0f1}); addPassenger(5.15,-4.0,{shirt:0xf9e79f,hair:0x1a1210});
+      var staff1=makePerson(0xe67e22,0x2c3e50,skinTones[1],{}); staff1.position.set(-20,1.63,-4.3); world.add(staff1); platformPassengers.push({g:staff1,homeX:-20,homeZ:-4.3,phase:1.2,speed:0.5,mode:"stand",walkDir:1,sit:false,baseY:1.63});
+      var staff2=makePerson(0x1a3a5c,0x1a1a2e,skinTones[0],{}); staff2.position.set(19,1.63,4.4); staff2.rotation.y=Math.PI; world.add(staff2); platformPassengers.push({g:staff2,homeX:19,homeZ:4.4,phase:3.1,speed:0.5,mode:"stand",walkDir:1,sit:false,baseY:1.63});
+      // Child near family
+      var child=makePerson(0xf39c12,0x2471a3,skinTones[4],{}); child.scale.set(0.8,0.8,0.8); child.position.set(5.7,1.63,-3.85); world.add(child); platformPassengers.push({g:child,homeX:5.7,homeZ:-3.85,phase:2.4,speed:1.1,mode:"stand",walkDir:1,sit:false,baseY:1.63});
+      // Travellers at the NORTH station building entrance (Pintu Utara) —
+      // static figures on the forecourt (foundation top y≈0.58), deliberately
+      // NOT in platformPassengers so the boarding-rush logic never pulls
+      // them across Jalur 1.
+      var np1=makePerson(0x2471a3,0x2c3e50,skinTones[2],{bag:0xc0392b}); np1.position.set(-4.5,0.58,-14.7); np1.rotation.y=0.2; world.add(np1);
+      var np2=makePerson(0xecf0f1,0x34495e,skinTones[0],{hijab:0x16a085}); np2.position.set(-3.6,0.58,-14.5); np2.rotation.y=-0.3; world.add(np2);
+      var np3=makePerson(0xe67e22,0x1a1a2e,skinTones[1],{backpack:0x2c3e50}); np3.position.set(6.5,0.58,-14.7); np3.rotation.y=0.35; world.add(np3);
+
+      /* trains */
+      var trainObjs = {};
+      function buildTrain(tr){
+        var g = new THREE.Group(); world.add(g);
+        var units = []; /* loco + each coach/wagon, positioned per-unit along the track path each frame */
+        var isBar = tr.type === "bar";
+        var isLok = tr.type === "lok";
+        // KAI livery palette
+        var kaiWhite = stdMat(0xf4f5f7, 0.42, 0.18);
+        var kaiSilver = stdMat(0xc9d1d9, 0.38, 0.45);
+        var bodyMain = isLok ? kaiSilver : kaiWhite;
+        var stripeMat = stdMat(isLok ? 0xc0392b : 0xe85d04, 0.5, 0.15);
+        var stripe2Mat = stdMat(isLok ? 0xf1c40f : 0x1a4f7a, 0.5, 0.15);
+        var roofMat = stdMat(0x8e9aA6, 0.55, 0.3);
+        var skirtMat = stdMat(0x232d38, 0.8, 0.25);
+        var glassMat = new THREE.MeshStandardMaterial({ color: 0x9fc6e2, roughness: 0.18, metalness: 0.35, transparent: true, opacity: 0.45 });
+        var glassWarm = new THREE.MeshStandardMaterial({ color: 0xa8c8de, roughness: 0.2, metalness: 0.2, emissive: 0xffca55, emissiveIntensity: 0.25, transparent: true, opacity: 0.5 });
+        var bogieMat = stdMat(0x171e26, 0.85, 0.3);
+        var wheelMat = stdMat(0x0d1116, 0.5, 0.6);
+        function bogie(parent, bx){
+          var bg = new THREE.Group(); bg.position.set(bx, 0, 0); parent.add(bg);
+          box(bg, 1.55, 0.38, 1.9, 0, 0.48, 0, bogieMat, false);
+          [-0.52, 0.52].forEach(function(wx2){ [-0.82, 0.82].forEach(function(wz2){
+            var w = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.12, 14), wheelMat);
+            w.rotation.x = Math.PI/2; w.position.set(wx2, 0.30, wz2); bg.add(w);
+          }); });
+          return bg;
+        }
+        function coachUnit(cx, len, opts){
+          opts = opts || {};
+          var cg = new THREE.Group(); cg.position.x = cx; world.add(cg); units.push({ obj: cg, cx: cx });
+          // body shell
+          box(cg, len, 1.92, 2.52, 0, 1.92, 0, opts.mat || bodyMain);
+          box(cg, len, 0.34, 2.30, 0, 3.02, 0, roofMat, false); // roof
+          box(cg, len*0.92, 0.28, 1.5, 0, 3.28, 0, stdMat(0xaab6c2,0.6,0.25), false); // AC pod
+          box(cg, len, 0.52, 2.18, 0, 0.72, 0, skirtMat, false); // underframe
+          // KAI stripes along both sides
+          [1.27, -1.27].forEach(function(sz){
+            box(cg, len, 0.28, 0.04, 0, 1.18, sz, stripeMat, false);
+            box(cg, len, 0.10, 0.04, 0, 1.42, sz, stripe2Mat, false);
+          });
+          // windows: individual panes + passenger silhouettes inside
+          var nWin = opts.windows || 6;
+          var skins = [0xf1c27d,0xe0ac69,0xc68642,0xffdbac,0x8d5524];
+          var shirtsIn = [0xc0392b,0x2471a3,0x1e8449,0x7d3c98,0xecf0f1,0xe67e22];
+          for (var wi = 0; wi < nWin; wi++){
+            var wxp = -len/2 + 0.55 + wi * ((len - 1.1) / Math.max(1, nWin - 1));
+            [1, -1].forEach(function(sideS){
+              var pane = box(cg, 0.52, 0.62, 0.05, wxp, 2.22, sideS * 1.27, (wi % 2 ? glassWarm : glassMat), false);
+              pane.material = (wi % 2 ? glassWarm : glassMat);
+              // passenger visible in ~65% of windows: head + shoulders pressed to glass
+              var seed = Math.abs(wi * 7 + (sideS > 0 ? 3 : 11) + Math.round(cx * 2)) % 10;
+              if (!isBar && seed < 7){
+                var hd = new THREE.Mesh(new THREE.SphereGeometry(0.17, 9, 8), stdMat(skins[seed % skins.length], 0.75, 0));
+                hd.position.set(wxp + (seed % 3 - 1) * 0.07, 2.24, sideS * 1.21); hd.scale.z = 0.6; cg.add(hd);
+                box(cg, 0.34, 0.26, 0.08, wxp, 1.98, sideS * 1.21, stdMat(shirtsIn[seed % shirtsIn.length], 0.9, 0), false);
+              }
+            });
+          }
+          // doors at both ends (both sides) with window + step
+          [-len/2 + 0.28, len/2 - 0.28].forEach(function(dx){
+            [1.28, -1.28].forEach(function(sz){
+              box(cg, 0.44, 1.72, 0.05, dx, 1.82, sz, stdMat(0xd7dde4,0.45,0.3), false);
+              box(cg, 0.30, 0.52, 0.06, dx, 2.28, sz, glassMat, false);
+            });
+          });
+          bogie(cg, -len/2 + 0.75); bogie(cg, len/2 - 0.75);
+          // gangway bellows to next car
+          box(cg, 0.18, 1.55, 1.7, -len/2 - 0.06, 1.92, 0, stdMat(0x2b333d,0.9,0), false);
+          return cg;
+        }
+        function locomotive(cx){
+          var lg = new THREE.Group(); lg.position.x = cx; world.add(lg); units.push({ obj: lg, cx: cx });
+          var locoMat = isBar ? stdMat(0xcc2229, 0.45, 0.2) : stdMat(0xf4f5f7, 0.42, 0.18);
+          var locoAccent = stdMat(0xcc2229, 0.5, 0.15);
+          box(lg, 3.9, 1.85, 2.55, 0, 1.95, 0, locoMat); // long hood body
+          box(lg, 3.9, 0.5, 2.15, 0, 0.75, 0, skirtMat, false);
+          box(lg, 1.25, 1.05, 2.45, 1.05, 3.38, 0, locoMat); // cab raised
+          box(lg, 3.7, 0.22, 2.2, -0.15, 3.02, 0, roofMat, false);
+          // cab windows (front + sides) - masinis silhouette in cab
+          box(lg, 0.06, 0.58, 1.65, 1.69, 3.42, 0, glassMat, false);
+          [1.24, -1.24].forEach(function(sz){ box(lg, 0.85, 0.55, 0.05, 1.05, 3.42, sz, glassMat, false); });
+          var driver = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), stdMat(0xe0ac69, 0.75, 0)); driver.position.set(1.30, 3.38, 0.35); lg.add(driver);
+          box(lg, 0.34, 0.30, 0.10, 1.30, 3.08, 0.35, stdMat(0x1a3a5c, 0.9, 0), false);
+          // red nose stripe + KAI-style front
+          box(lg, 0.10, 1.30, 2.30, 1.99, 1.95, 0, locoAccent, false);
+          box(lg, 0.08, 0.42, 1.5, 2.02, 2.32, 0, glassMat, false);
+          [0.62, -0.62].forEach(function(hz){
+            var hl2 = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), stdMat(0xfff3c4, 0.25, 0, 0xffe27a, 2.2)); hl2.position.set(2.06, 1.55, hz); lg.add(hl2);
+            box(lg, 0.06, 0.10, 0.5, 2.03, 1.08, hz, stdMat(0x111111, 0.7, 0.3), false); // grille slats hint
+          });
+          // exhaust + horn on roof
+          box(lg, 0.7, 0.22, 0.7, -0.9, 3.22, 0, stdMat(0x333d47, 0.7, 0.3), false);
+          box(lg, 0.5, 0.14, 0.22, 0.45, 3.20, 0, stdMat(0xd9b23a, 0.5, 0.4), false);
+          // side stripe + walkway
+          [1.29, -1.29].forEach(function(sz){ box(lg, 3.9, 0.30, 0.04, 0, 1.30, sz, locoAccent, false); box(lg, 3.9, 0.08, 0.30, 0, 1.02, sz + (sz > 0 ? 0.10 : -0.10), stdMat(0x98a4b0, 0.6, 0.4), false); });
+          bogie(lg, -1.25); bogie(lg, 1.25);
+          // cowcatcher / plow
+          var plow = box(lg, 0.55, 0.55, 2.1, 2.05, 0.55, 0, stdMat(0x8c1f28, 0.7, 0.2), false); plow.rotation.z = -0.5;
+          return lg;
+        }
+        var TRAIN_LEN = 21.5;
+        if (isBar){
+          locomotive(8.6);
+          var contCols2 = [0x1f6f8b, 0xc65d21, 0x2e7d32, 0x707d8c, 0x8e2f32];
+          var contNames = 0;
+          for (var ci = 0; ci < 5; ci++){
+            var wx3 = 5.9 - ci * 3.55;
+            var wg = new THREE.Group(); wg.position.x = wx3; world.add(wg); units.push({ obj: wg, cx: wx3 });
+            box(wg, 3.35, 0.42, 2.15, 0, 0.72, 0, skirtMat, false);
+            var cont = box(wg, 3.25, 1.95, 2.35, 0, 1.92, 0, stdMat(contCols2[ci], 0.72, 0.18));
+            // corrugation ribs
+            for (var rb = -1.4; rb <= 1.4; rb += 0.4){ box(wg, 0.07, 1.80, 2.39, rb, 1.92, 0, stdMat(contCols2[ci], 0.8, 0.1), false); }
+            box(wg, 3.27, 0.14, 2.37, 0, 2.95, 0, stdMat(0x222222, 0.8, 0), false);
+            bogie(wg, -1.05); bogie(wg, 1.05);
+            contNames++;
+          }
+        } else {
+          locomotive(8.85);
+          var nCoach = isLok ? 5 : 5;
+          for (var cj = 0; cj < nCoach; cj++){
+            var ccx = 4.95 - cj * 3.62;
+            coachUnit(ccx, 3.45, { windows: isLok ? 5 : 6, mat: bodyMain });
+          }
+          // tail marker light on last car (rides with that unit through switches)
+          var tail = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 8), stdMat(0xff2222, 0.3, 0, 0xff2222, 2.0));
+          tail.position.set(-8.95 - units[units.length - 1].cx, 1.95, 0); units[units.length - 1].obj.add(tail);
+        }
+        var edges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(TRAIN_LEN + 0.6, 4.1, 3.2)),
+          new THREE.LineBasicMaterial({ color: 0xe8a33d })
+        );
+        edges.position.y = 1.85; edges.visible = false; g.add(edges);
+        var L = makeLabelSprite(512, 128, 11.5, 2.9);
+        L.sprite.position.set(0, 5.45, 0); g.add(L.sprite);
+        var hit = box(g, TRAIN_LEN + 0.6, 4.4, 3.6, 0, 1.9, 0, new THREE.MeshBasicMaterial({ visible: false }), false);
+        hit.userData = { kind: "train", id: tr.id }; clickables.push(hit);
+        g.visible = false;
+        units.forEach(function(u){ u.obj.visible = false; });
+        trainObjs[tr.id] = { group: g, label: L, edges: edges, units: units, front: 10.85 };
+      }
+      G.trains.forEach(buildTrain);
+
+      S3 = {
+        scene: scene, camera: camera, renderer: renderer, container: container,
+        railMats: railMats, switchBeds: switchBeds, signalObjs: signalObjs,
+        switchObjs: switchObjs, closureGroup: closureGroup, trainObjs: trainObjs,
+        clickables: clickables, passengers: platformPassengers, animT: 0,
+        cam: { az: -0.62, el: 0.60, r: 52, tx: 0, ty: 1.2, tz: 0 },
+        goal: { az: -0.62, el: 0.60, r: 52, tx: 0, ty: 1.2, tz: 0 },
+        lastW: 0, lastTs: 0
+      };
+      attachCameraControls();
+      resize3D();
+    }
+    function resize3D(){
+      if (!S3 || S3.failed) return;
+      var w = S3.container.clientWidth, h = S3.container.clientHeight;
+      if (!w || !h) return;
+      S3.renderer.setSize(w, h, false);
+      S3.camera.aspect = w / h; S3.camera.updateProjectionMatrix();
+      S3.lastW = w;
+    }
+    function attachCameraControls(){
+      var el = S3.renderer.domElement;
+      var pointers = {}, downPos = null, moved = 0, pinchD = 0;
+      el.addEventListener("pointerdown", function(ev){
+        pointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+        if (Object.keys(pointers).length === 1){ downPos = { x: ev.clientX, y: ev.clientY }; moved = 0; }
+        if (Object.keys(pointers).length === 2){
+          var ps = Object.values(pointers);
+          pinchD = Math.hypot(ps[0].x - ps[1].x, ps[0].y - ps[1].y);
+        }
+        try{ el.setPointerCapture(ev.pointerId); }catch(e){}
+      });
+      el.addEventListener("pointermove", function(ev){
+        if (!pointers[ev.pointerId]) return;
+        var prev = pointers[ev.pointerId];
+        var dx = ev.clientX - prev.x, dy = ev.clientY - prev.y;
+        /* Mode diputer 90°: sumbu seret disaluyukeun jeung puteranna,
+           jadi nyeret ka gigir di layar = muter kaméra ka gigir. */
+        if (document.body.classList.contains("is-rotated")){ var rdx = dy; dy = -dx; dx = rdx; }
+        pointers[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+        moved += Math.abs(dx) + Math.abs(dy);
+        if (Object.keys(pointers).length === 2){
+          var ps = Object.values(pointers);
+          var d = Math.hypot(ps[0].x - ps[1].x, ps[0].y - ps[1].y);
+          if (pinchD) S3.goal.r = Math.max(26, Math.min(115, S3.goal.r * pinchD / Math.max(20, d)));
+          pinchD = d; return;
+        }
+        if (downPos){
+          S3.goal.az -= dx * 0.0052;
+          S3.goal.el = Math.max(0.07, Math.min(1.5, S3.goal.el + dy * 0.0052));
+          S3.cam.az = S3.goal.az; S3.cam.el = S3.goal.el;
+        }
+      });
+      function endPointer(ev){
+        var wasTap = downPos && moved < 8 && pointers[ev.pointerId];
+        delete pointers[ev.pointerId];
+        if (Object.keys(pointers).length === 0){
+          if (wasTap) pick3D(ev.clientX, ev.clientY);
+          downPos = null; pinchD = 0;
+        }
+      }
+      el.addEventListener("pointerup", endPointer);
+      el.addEventListener("pointercancel", function(ev){ delete pointers[ev.pointerId]; downPos = null; });
+      el.addEventListener("wheel", function(ev){
+        ev.preventDefault();
+        S3.goal.r = Math.max(26, Math.min(115, S3.goal.r * (1 + ev.deltaY * 0.0011)));
+      }, { passive: false });
+      document.querySelectorAll("[data-view]").forEach(function(b){
+        b.addEventListener("click", function(){
+          document.querySelectorAll("[data-view]").forEach(function(x){ x.classList.remove("on"); });
+          b.classList.add("on");
+          var v = b.dataset.view;
+          if (v === "bebas") S3.goal = { az: -0.62, el: 0.60, r: 52, tx: 0, ty: 1.2, tz: 0 };
+          else if (v === "atas") S3.goal = { az: 0, el: 1.48, r: 76, tx: 0, ty: 0, tz: 0 };
+          else if (v === "peron") S3.goal = { az: 1.12, el: 0.12, r: 30, tx: 0, ty: 1.6, tz: 2 };
+          else if (v === "samping") S3.goal = { az: 1.57, el: 0.3, r: 54, tx: 0, ty: 1.2, tz: 0 };
+        });
+      });
+    }
+    function pick3D(clientX, clientY){
+      if (!S3 || S3.failed) return;
+      var rect = S3.renderer.domElement.getBoundingClientRect();
+      var mouse;
+      if (document.body.classList.contains("is-rotated")){
+        /* Kanvas diputer 90° ku CSS: rect mangrupa kotak visualna.
+           Sumbu ditukeur — X layar jadi Y kanvas, Y layar jadi X kanvas. */
+        mouse = new THREE.Vector2(
+          ((clientY - rect.top) / rect.height) * 2 - 1,
+          ((clientX - rect.left) / rect.width) * 2 - 1
+        );
+      } else {
+        mouse = new THREE.Vector2(
+          ((clientX - rect.left) / rect.width) * 2 - 1,
+          -((clientY - rect.top) / rect.height) * 2 + 1
+        );
+      }
+      var rc = new THREE.Raycaster();
+      rc.setFromCamera(mouse, S3.camera);
+      var hits = rc.intersectObjects(S3.clickables, false);
+      for (var i = 0; i < hits.length; i++){
+        var u = hits[i].object.userData;
+        var obj = hits[i].object;
+        var vis = true, o = obj;
+        while (o){ if (o.visible === false && o !== obj) { vis = false; break; } o = o.parent; }
+        if (obj.parent && obj.parent.visible === false) continue;
+        if (u.kind === "train"){
+          var tr = trainById(u.id);
+          if (tr && tr.state !== "scheduled" && tr.state !== "done") selectTrain(u.id);
+          return;
+        }
+        if (u.kind === "sig"){ toggleSignal(u.key, $("sig_" + u.key)); return; }
+        if (u.kind === "sw"){ cycleSwitch(u.side); return; }
+      }
+    }
+    function trainStatusText(tr){
+      switch(tr.state){
+        case "approach": return "MENDEKAT";
+        case "waiting": return "MENUNGGU SINYAL";
+        case "entering": return "MASUK · JALUR " + tr.track;
+        case "arriving": return tr.dwellTotal === 0 ? "MELINTAS · JALUR " + tr.track : "MENUJU PERON · JALUR " + tr.track;
+        case "dwell": return "BERHENTI · " + Math.ceil(tr.dwellLeft) + " MNT";
+        case "ready": return "SIAP BERANGKAT";
+        case "exiting": return "BERANGKAT";
+      }
+      return "";
+    }
+    function updateScene3D(){
+      var n, side;
+      /* signals */
+      SIG_DEFS.forEach(function(d){
+        var o = S3.signalObjs[d.key]; if (!o) return;
+        var open = !!G.sig[d.key];
+        o.grnMat.emissiveIntensity = open ? 1.7 : 0.06;
+        o.redMat.emissiveIntensity = open ? 0.06 : 1.7;
+      });
+      /* switches */
+      ["W","E"].forEach(function(sd){
+        var o = S3.switchObjs[sd]; if (!o) return;
+        var locked = switchLocked(sd);
+        o.dia.rotation.y += 0.02;
+        o.diaMat.color.setHex(locked ? 0xc22f2f : 0xe8a33d);
+        o.diaMat.emissive.setHex(locked ? 0xc22f2f : 0xe8a33d);
+        var key = sd + G.sw[sd] + (locked ? "L" : "");
+        drawLabel(o.label, key, function(c2, cv2){
+          c2.clearRect(0,0,512,96);
+          pill(c2, 56, 14, 400, 66, 14, locked ? "rgba(90,18,18,.88)" : "rgba(10,22,34,.85)");
+          c2.fillStyle = "#ffd98a"; c2.font = "800 34px 'IBM Plex Mono', monospace"; c2.textAlign = "center";
+          c2.fillText((sd === "W" ? "W1" : "W2") + " ▸ JALUR " + G.sw[sd] + (locked ? " · KUNCI" : ""), 256, 60);
+        });
+        for (n = 1; n <= 3; n++) S3.switchBeds[sd][n].material.emissiveIntensity = G.sw[sd] === n ? 0.4 : 0;
+      });
+      /* track occupancy tint */
+      for (n = 1; n <= 3; n++){
+        var occ = trackOccupant(n, null);
+        S3.railMats[n].emissive = new THREE.Color(occ ? 0x7c1d1d : 0x000000);
+        S3.railMats[n].emissiveIntensity = occ ? 0.55 : 0;
+      }
+      S3.closureGroup.visible = closureActive();
+      /* passengers animation: idle sway, walking, boarding rush during dwell */
+      S3.animT += 0.016;
+      var dwellTracks = {};
+      G.trains.forEach(function(tt){ if (tt.state === "dwell" || tt.state === "arriving") dwellTracks[tt.track] = tt; });
+      if (S3.passengers){
+        S3.passengers.forEach(function(pp, pi){
+          var grp = pp.g; var ud = grp.userData;
+          var t = S3.animT * pp.speed + pp.phase;
+          if (pp.sit){
+            grp.position.y = pp.baseY + 0.07 + Math.sin(t * 1.4) * 0.012;
+            if (ud.head) ud.head.rotation.y = Math.sin(t * 0.6) * 0.35;
+            return;
+          }
+          // Determine if this passenger should rush to a dwelling train on their platform side
+          var platTrack = pp.homeZ < 0 ? 1 : 2; // Peron 1 serves Jalur 1, Peron 2 serves Jalur 2/3 approx
+          var rushing = false; var rushZ = pp.homeZ;
+          for (var tk in dwellTracks){ var dtr = dwellTracks[tk]; var tz = trackZ(dtr.track); var pz = pp.homeZ < 0 ? -5.5 : 5.5; if (Math.abs(tz - pz) < 6.5) rushing = true; }
+          if (pp.mode === "walk" || rushing){
+            var spd = rushing ? 0.045 : 0.022;
+            grp.position.x += pp.walkDir * spd;
+            if (grp.position.x > 20) pp.walkDir = -1;
+            if (grp.position.x < -20) pp.walkDir = 1;
+            grp.rotation.y = pp.walkDir > 0 ? Math.PI/2 : -Math.PI/2;
+            if (pp.homeZ > 0 && !rushing) grp.rotation.y += Math.PI;
+            // walk bob + leg/arm swing
+            grp.position.y = pp.baseY + Math.abs(Math.sin(t * 7)) * 0.06;
+            if (ud.legL) ud.legL.rotation.x = Math.sin(t * 7) * 0.55;
+            if (ud.legR) ud.legR.rotation.x = Math.sin(t * 7 + Math.PI) * 0.55;
+            if (ud.armL) ud.armL.rotation.x = Math.sin(t * 7 + Math.PI) * 0.35;
+            if (ud.armR) ud.armR.rotation.x = Math.sin(t * 7) * 0.35;
+            // during rush, drift toward platform edge
+            if (rushing){ var edgeZ = pp.homeZ < 0 ? -3.9 : 3.9; grp.position.z += (edgeZ - grp.position.z) * 0.02; }
+            else { grp.position.z += (pp.homeZ - grp.position.z) * 0.01; }
+          } else {
+            grp.position.y = pp.baseY + Math.sin(t * 2.0) * 0.018;
+            grp.position.x += (pp.homeX - grp.position.x) * 0.02;
+            grp.position.z += (pp.homeZ - grp.position.z) * 0.03;
+            if (ud.legL) ud.legL.rotation.x *= 0.8;
+            if (ud.legR) ud.legR.rotation.x *= 0.8;
+            if (ud.head) ud.head.rotation.y = Math.sin(t * 0.5) * 0.4;
+            // occasional phone-check arm lift for a few passengers
+            if (pi % 5 === 0 && ud.armR) ud.armR.rotation.x = -0.9 + Math.sin(t * 0.8) * 0.08;
+          }
+        });
+      }
+      /* trains */
+      G.trains.forEach(function(tr){
+        var o = S3.trainObjs[tr.id]; if (!o) return;
+        if (tr.state === "scheduled" || tr.state === "done"){
+          o.group.visible = false;
+          o.units.forEach(function(u){ u.obj.visible = false; });
+          return;
+        }
+        o.group.visible = true;
+        /* Each unit follows the track centreline at its own longitudinal
+           position: through a turnout the front can already be on the
+           station track while the rear coaches are still on the main line,
+           exactly like a real train — no more sideways sliding. */
+        var frontS = wx(tr.x);
+        var midS = frontS - tr.dir * (o.front + 0.2);
+        o.group.position.set(midS, 0.55, turnoutZ(midS, tr.track));
+        o.group.rotation.y = turnoutYaw(midS, tr.track, tr.dir);
+        o.units.forEach(function(u){
+          var s = frontS - tr.dir * (o.front - u.cx);
+          u.obj.visible = true;
+          u.obj.position.set(s, 0.55, turnoutZ(s, tr.track));
+          u.obj.rotation.y = turnoutYaw(s, tr.track, tr.dir);
+        });
+        o.edges.visible = G.selected === tr.id;
+        var st = trainStatusText(tr);
+        var key = tr.state + "|" + st + "|" + (G.selected === tr.id ? "s" : "");
+        drawLabel(o.label, key, function(c2, cv2){
+          c2.clearRect(0,0,512,128);
+          pill(c2, 36, 8, 440, 76, 16, G.selected === tr.id ? "rgba(120,74,4,.92)" : "rgba(10,22,34,.85)");
+          c2.fillStyle = "#fff"; c2.font = "800 30px 'IBM Plex Sans', sans-serif"; c2.textAlign = "center";
+          c2.fillText("KA " + tr.id + " · " + tr.name, 256, 42);
+          c2.fillStyle = tr.state === "waiting" ? "#ff9d94" : "#ffd98a";
+          c2.font = "700 24px 'IBM Plex Mono', monospace";
+          c2.fillText(st, 256, 72);
+        });
+      });
+      /* camera damping */
+      var c = S3.cam, g = S3.goal, k = 0.14;
+      c.az += (g.az - c.az) * k; c.el += (g.el - c.el) * k; c.r += (g.r - c.r) * k;
+      c.tx += (g.tx - c.tx) * k; c.ty += (g.ty - c.ty) * k; c.tz += (g.tz - c.tz) * k;
+      var ce = Math.cos(c.el), se = Math.sin(c.el);
+      S3.camera.position.set(
+        c.tx + c.r * ce * Math.sin(c.az),
+        c.ty + c.r * se,
+        c.tz + c.r * ce * Math.cos(c.az)
+      );
+      S3.camera.lookAt(c.tx, c.ty, c.tz);
+      if (S3.container.clientWidth && S3.container.clientWidth !== S3.lastW) resize3D();
+    }
+    function draw(){
+      ensure3D();
+      if (!S3 || S3.failed) return;
+      updateScene3D();
+      S3.renderer.render(S3.scene, S3.camera);
+    }
+    function cycleSwitch(side){
+      if (switchLocked(side)){ deny(null, "wesel terkunci, ada kereta melintas."); return; }
+      var n = G.sw[side]%3 + 1;
+      if (closureActive() && n===3) n = 1;
+      setSwitch(side, n, null);
+    }
+
+    /* ================= MAIN LOOP & WIRING ================= */
+    var lastTs = 0, uiAcc = 0;
+    function loop(ts){
+      requestAnimationFrame(loop);
+      var dt = Math.min(0.05, (ts - lastTs)/1000 || 0); lastTs = ts;
+      if (G.running && !G.ended){
+        step(dt * G.speed);
+        uiAcc += dt;
+        if (uiAcc > 0.2){ uiAcc = 0; updateHUD(); renderTT(); refreshControls(); if (G.selected) updateHint(); }
+      }
+      draw();
+    }
+    $("btnStart").addEventListener("click", function(){
+      $("overlayStart").classList.remove("show");
+      G.running = true; beep(660,.1,"sine"); beep(880,.14,"sine",.1);
+      addLog("evt", "Dinas dimulai. GAPEKA hari ini: 8 kereta. Selamat bertugas, PPKA Sukamaju!");
+    });
+    $("btnPause").addEventListener("click", function(){
+      if (G.ended) return;
+      G.running = !G.running;
+      this.textContent = G.running ? "⏸ Jeda" : "▶ Lanjut";
+    });
+    document.querySelectorAll(".spd").forEach(function(b){
+      b.addEventListener("click", function(){
+        document.querySelectorAll(".spd").forEach(function(x){ x.classList.remove("on"); });
+        b.classList.add("on"); G.speed = +b.dataset.speed;
+      });
+    });
+    $("btnSound").addEventListener("click", function(){
+      G.sound = !G.sound;
+      this.textContent = G.sound ? "🔊 Suara" : "🔇 Senyap";
+      this.classList.toggle("on", G.sound);
+      if (G.sound) beep(880,.08,"sine");
+    });
+    function restart(){
+      resetGame();
+      $("overlayEnd").classList.remove("show");
+      $("overlayStart").classList.remove("show");
+      $("btnPause").textContent = "⏸ Jeda";
+      G.running = true;
+      addLog("evt", "Dinas baru dimulai. Selamat bertugas, PPKA Sukamaju!");
+    }
+    $("btnRestart").addEventListener("click", restart);
+    $("btnAgain").addEventListener("click", restart);
+
+    /* ---------- LANDSCAPE MODE ---------- */
+    var landscapeForced = false;
+    function syncLandscapeClass(){
+      var wide = window.innerWidth >= window.innerHeight;
+      document.body.classList.toggle("is-wide", wide);
+      var active = landscapeForced || wide;
+      document.body.classList.toggle("is-landscape", active);
+      /* Mun dipaksa landscape tapi viewport masih potret (webview ngonci
+         orientasi), puter tampilanna 90° ku CSS — kelas .is-rotated.
+         Mun alatna beneran jadi lega, puteranna dicabut otomatis. */
+      document.body.classList.toggle("is-rotated", landscapeForced && !wide);
+      var btn = $("btnLandscape");
+      if (btn){
+        btn.classList.toggle("on", active);
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+        btn.textContent = active ? "▭ Landscape ✓" : "▭ Landscape";
+      }
+      var hint = $("landscapeHint");
+      if (hint) hint.classList.toggle("show", landscapeForced && !wide);
+      /* canvas kudu diukur deui sanggeus kelas robah (aspect / jangkungna robah) */
+      setTimeout(resize3D, 60);
+    }
+    function tryFullscreenLandscape(){
+      try{
+        var el = document.documentElement;
+        if (el.requestFullscreen) { var p = el.requestFullscreen({ navigationUI: "hide" }); if (p && p.catch) p.catch(function(){}); }
+      }catch(e){}
+      try{
+        if (screen.orientation && screen.orientation.lock) { var q = screen.orientation.lock("landscape"); if (q && q.catch) q.catch(function(){}); }
+      }catch(e){}
+    }
+    $("btnLandscape").addEventListener("click", function(){
+      landscapeForced = !landscapeForced;
+      if (landscapeForced) tryFullscreenLandscape();
+      syncLandscapeClass();
+      if (landscapeForced) addLog("evt", "Mode Landscape diaktipkeun — tampilan diputer 90°, puter alat ka gigir pikeun pandangan panglegana.");
+    });
+    $("btnFull").addEventListener("click", function(){
+      try{
+        if (document.fullscreenElement){ document.exitFullscreen(); }
+        else tryFullscreenLandscape();
+      }catch(e){}
+      setTimeout(syncLandscapeClass, 120);
+    });
+    window.addEventListener("orientationchange", function(){ setTimeout(syncLandscapeClass, 120); });
+    if (window.matchMedia){
+      try{ var mqLand = window.matchMedia("(orientation: landscape)"); if (mqLand.addEventListener) mqLand.addEventListener("change", syncLandscapeClass); }catch(e){}
+    }
+    syncLandscapeClass();
+
+    window.addEventListener("resize", function(){ resize3D(); syncLandscapeClass(); });
+
+    resetGame();
+    resize3D();
+    requestAnimationFrame(function(ts){ lastTs = ts; requestAnimationFrame(loop); });
+    </script>
+  </body>
+</html>
