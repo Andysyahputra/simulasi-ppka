@@ -142,7 +142,7 @@
 
       /* ---------- Timetable ---------- */
       .ttrow{
-        display:grid; grid-template-columns:52px 1fr auto; gap:4px 10px; width:100%; text-align:left;
+        display:grid; grid-template-columns:88px 1fr auto; gap:4px 10px; width:100%; text-align:left;
         padding:9px 14px; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--ink);
         cursor:pointer; font-family:"IBM Plex Sans", sans-serif; align-items:center; border-radius:0;
       }
@@ -157,6 +157,24 @@
       .chip.stop{ background:var(--amber-bg); color:var(--amber); }
       .chip.done{ background:var(--green-bg); color:var(--green); }
       .chip.late{ background:var(--red-bg); color:var(--red); }
+
+      /* ---------- Jam & jadwal datang / berangkat ---------- */
+      .hud .stat.clockstat{ display:flex; align-items:center; gap:10px; flex:1 1 218px; }
+      #hudAnalog{ width:50px; height:50px; flex:none; }
+      .clocksub{ font-size:.66rem; color:var(--muted); font-weight:600; margin-top:1px; }
+      @media (max-width:560px){ #hudAnalog{ width:42px; height:42px; } }
+      .ttnext{ padding:9px 14px; background:var(--teal-bg); border-bottom:1px solid var(--line); font-size:.8rem; font-weight:700; line-height:1.45; }
+      .ttnext .mono{ color:var(--teal); }
+      .tthead{
+        display:grid; grid-template-columns:88px 1fr auto; gap:4px 10px;
+        padding:7px 14px 5px; border-bottom:1px solid var(--line);
+        font-size:.62rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
+      }
+      .ttimes{ display:flex; flex-direction:column; gap:4px; }
+      .ttime .tlbl{ display:block; font-size:.56rem; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); }
+      .ttime b{ font-family:"IBM Plex Mono", monospace; font-size:.88rem; font-weight:700; line-height:1.1; }
+      .ttrow .mt.act{ color:var(--green); font-weight:700; }
+      .ttrow .mt.actlate{ color:var(--red); font-weight:700; }
 
       /* ---------- Log ---------- */
       .loglist{ list-style:none; margin:0; padding:8px 0; max-height:300px; overflow:auto; }
@@ -329,7 +347,7 @@
 
       <!-- HUD -->
       <div class="hud" role="region" aria-label="Panel dinas PPKA">
-        <div class="stat"><div class="k">Jam Dinas</div><div class="v" id="hudClock">06:00</div></div>
+        <div class="stat clockstat"><canvas id="hudAnalog" width="104" height="104" aria-hidden="true"></canvas><div><div class="k">Jam Dinas · Jam Stasiun</div><div class="v" id="hudClock">06:00</div><div class="clocksub">Stasiun Sukamaju</div></div></div>
         <div class="stat"><div class="k">Skor</div><div class="v" id="hudScore">0</div></div>
         <div class="stat"><div class="k">Kereta Selesai</div><div class="v"><span id="hudDone">0</span><small> / 8</small></div></div>
         <div class="stat"><div class="k">Keselamatan</div><div class="v"><span id="hudSafe">100</span><small>%</small></div></div>
@@ -409,6 +427,7 @@
                 <li><strong>Berangkatkan:</strong> setelah naik-turun penumpang selesai, atur wesel sisi keberangkatan ke jalur kereta itu, lalu buka sinyal keluar. KA barang langsung melintas — siapkan rute keluarnya sebelum ia tiba di tengah stasiun supaya tidak berhenti.</li>
                 <li><strong>Skor:</strong> +100 per kereta berangkat, +25 bila jalur sesuai rencana, +10 bila tepat waktu (telat ≤ 5 menit). Setiap menit keterlambatan mengurangi poin.</li>
                 <li>Wesel <strong>terkunci otomatis</strong> selama ada kereta melintasinya — jangan panik, tunggu sampai kereta lewat.</li>
+              <li><strong>Jam datang &amp; berangkat:</strong> kolom kiri GAPEKA menampilkan jam datang dan jam berangkat terjadwal tiap kereta, dan strip di atasnya menunjukkan kedatangan berikutnya. Jam aktual kedatangan/keberangkatan muncul di bawah nama kereta begitu kejadiannya terjadi, lengkap dengan keterangan telatnya. Jam stasiun di gedung dan jam analog di panel atas mengikuti jam dinas yang sama.</li>
               </ol>
             </div>
           </details>
@@ -417,7 +436,9 @@
         <!-- RIGHT: timetable + log -->
         <div class="rightcol">
           <section class="card">
-            <div class="chead"><h2>GAPEKA — Jadwal Dinas</h2><span class="sub">06:00–12:00</span></div>
+            <div class="chead"><h2>GAPEKA — Jadwal Dinas</h2><span class="sub">06:00–12:00 · Jam <span class="mono" id="ttClock">06:00</span></span></div>
+            <div class="ttnext" id="ttNext">Memuat jadwal…</div>
+            <div class="tthead" aria-hidden="true"><span>Datang · Berangkat</span><span>Kereta</span><span>Status</span></div>
             <div id="ttBody"></div>
           </section>
 
@@ -440,6 +461,7 @@
           <li>Kereta berhenti di <strong>sinyal masuk</strong> yang merah — atur <strong>wesel</strong> ke jalur rencana, lalu buka sinyalnya.</li>
           <li>Setelah penumpang naik-turun, atur wesel sisi keluar ke jalur kereta itu dan buka <strong>sinyal keluar</strong>.</li>
           <li>Interlocking menjaga keselamatan: sinyal menolak dibuka ke jalur yang terisi. Penolakan = peringatan.</li>
+          <li><strong>Jam &amp; jadwal:</strong> jam dinas analog di panel atas dan jam stasiun di gedung bergerak mengikuti waktu dinas. Di GAPEKA, tiap kereta kini punya <strong>jam datang</strong> dan <strong>jam berangkat</strong> terjadwal — setelah kereta tiba atau berangkat, jam aktualnya ikut tampil di baris keretanya.</li>
           <li>Pertengahan dinas ada <strong>pemeriksaan wesel di Jalur 3</strong> — siap-siap mengalihkan kereta ke jalur lain.</li>
         </ol>
         <button class="bigbtn" id="btnStart" type="button">Mulai Dinas</button>
@@ -495,7 +517,9 @@
         dwellTotal:d.dwell, from:d.from, to:d.to,
         state:"scheduled", x:0, y:MAIN_Y, track:0, dwellLeft:0, delay:0,
         enterSide:null, exitSide:null, scored:false, complained:false,
-        schedDepart: d.spawn + 48 + d.dwell };
+        schedArrive: d.spawn + 40,
+        schedDepart: d.spawn + 40 + d.dwell,
+        actualArrive:null, actualDepart:null };
     }
     function resetGame(){
       G = { t:0, running:false, ended:false, speed:1, score:0, warnings:0, safety:100,
@@ -654,7 +678,7 @@
       tr.state = "approach";
       tr.x = tr.dir===1 ? -70 : 1070;
       tr.y = MAIN_Y;
-      addLog("evt", "KA "+tr.id+" ("+tr.name+") mendekat dari "+(tr.dir===1?"barat":"timur")+" — rencana Jalur "+tr.planned+".");
+      addLog("evt", "KA "+tr.id+" ("+tr.name+") mendekat dari "+(tr.dir===1?"barat":"timur")+" — rencana Jalur "+tr.planned+", jadwal datang "+clockStr(tr.schedArrive)+" · berangkat "+clockStr(tr.schedDepart)+".");
       if (!G.selected) selectTrain(tr.id);
     }
     function beginEntering(tr){
@@ -668,6 +692,8 @@
     function beginExiting(tr){
       var side = tr.dir===1 ? "E" : "W";
       tr.exitSide = side; tr.state = "exiting";
+      if (tr.actualArrive===null) tr.actualArrive = G.t;
+      tr.actualDepart = G.t;
       G.sig[tr.dir===1 ? "outE" : "outW"] = false;
       if (!tr.scored){
         tr.scored = true;
@@ -679,7 +705,7 @@
         G.score += pts; G.delaySum += tr.delay;
         sndDepart();
         addLog(tr.delay<=5 ? "ok" : "warn",
-          "KA "+tr.id+" berangkat dari Jalur "+tr.track+" — "+(tr.delay<=5 ? "tepat waktu" : "telat "+tr.delay+" menit")+", +"+pts+" poin.");
+          "KA "+tr.id+" berangkat pukul "+clockStr(G.t)+" dari Jalur "+tr.track+" (jadwal "+clockStr(tr.schedDepart)+") — "+(tr.delay<=5 ? "tepat waktu" : "telat "+tr.delay+" menit")+", +"+pts+" poin.");
       }
       refreshControls();
     }
@@ -732,11 +758,12 @@
         tr.x += tr.dir * 42 * sp;
         if ((tr.dir===1 && tr.x>=stopFront) || (tr.dir===-1 && tr.x<=stopFront)){
           tr.x = stopFront;
+          if (tr.actualArrive===null) tr.actualArrive = G.t;
           if (tr.dwellTotal>0){
             tr.state="dwell"; tr.dwellLeft = tr.dwellTotal;
-            addLog("", "KA "+tr.id+" berhenti di Jalur "+tr.track+" — naik-turun penumpang "+tr.dwellTotal+" menit.");
+            addLog("", "KA "+tr.id+" datang pukul "+clockStr(G.t)+" (jadwal "+clockStr(tr.schedArrive)+"), berhenti di Jalur "+tr.track+" — naik-turun penumpang "+tr.dwellTotal+" menit, jadwal berangkat "+clockStr(tr.schedDepart)+".");
           } else if (exitReady(tr)){ beginExiting(tr); }
-          else { tr.state="ready"; addLog("", "KA "+tr.id+" ("+tr.name+") siap melintas — tunggu sinyal keluar dibuka."); }
+          else { tr.state="ready"; addLog("", "KA "+tr.id+" ("+tr.name+") datang pukul "+clockStr(G.t)+" (jadwal "+clockStr(tr.schedArrive)+"), siap melintas — tunggu sinyal keluar dibuka."); }
         }
         return;
       }
@@ -806,8 +833,26 @@
     }
 
     /* ================= UI UPDATES ================= */
+    function drawAnalogClock(){
+      var c = $("hudAnalog"); if (!c || !c.getContext) return;
+      var ctx = c.getContext("2d"); if (!ctx) return;
+      var W = c.width, cx = W/2, cy = W/2, R = W/2 - 6;
+      var total = 360 + G.t, mm = total % 60, hh = (total/60) % 12;
+      ctx.clearRect(0,0,W,W);
+      ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fillStyle = "#fdfdf8"; ctx.fill();
+      ctx.lineWidth = 5; ctx.strokeStyle = "#17222d"; ctx.stroke();
+      for (var i=0;i<12;i++){ var a=i*Math.PI/6; ctx.beginPath(); ctx.lineWidth = i%3===0?5:2.5; ctx.strokeStyle="#17222d";
+        ctx.moveTo(cx+Math.sin(a)*(R-13), cy-Math.cos(a)*(R-13)); ctx.lineTo(cx+Math.sin(a)*(R-5), cy-Math.cos(a)*(R-5)); ctx.stroke(); }
+      var ha = (hh + mm/60) * Math.PI/6, ma = mm * Math.PI/30;
+      ctx.lineCap = "round";
+      ctx.beginPath(); ctx.lineWidth=8; ctx.strokeStyle="#17222d"; ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.sin(ha)*R*0.52, cy-Math.cos(ha)*R*0.52); ctx.stroke();
+      ctx.beginPath(); ctx.lineWidth=5.5; ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.sin(ma)*R*0.78, cy-Math.cos(ma)*R*0.78); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2); ctx.fillStyle="#b97a0e"; ctx.fill();
+    }
     function updateHUD(){
       $("hudClock").textContent = clockStr(G.t);
+      var tc = $("ttClock"); if (tc) tc.textContent = clockStr(G.t);
+      drawAnalogClock();
       $("hudScore").textContent = G.score;
       $("hudDone").textContent = G.completed;
       $("hudSafe").textContent = G.safety;
@@ -830,15 +875,36 @@
     function renderTT(){
       var html = "";
       G.trains.forEach(function(tr){
+        var act = "";
+        if (tr.actualArrive!==null || tr.actualDepart!==null){
+          var parts = [];
+          if (tr.actualArrive!==null) parts.push("datang "+clockStr(tr.actualArrive));
+          if (tr.actualDepart!==null) parts.push("berangkat "+clockStr(tr.actualDepart)+(tr.delay>5 ? " · telat "+tr.delay+" mnt" : ""));
+          var lateCls = (tr.actualDepart!==null && tr.delay>5) ? " actlate" : "";
+          act = '<br><span class="mt act'+lateCls+'">Aktual: '+parts.join(" · ")+'</span>';
+        }
         html += '<button type="button" class="ttrow'+(G.selected===tr.id?" sel":"")+'" data-id="'+tr.id+'">'
-          + '<span class="tm">'+clockStr(tr.spawn)+'</span>'
+          + '<span class="ttimes">'
+          + '<span class="ttime"><span class="tlbl">Datang</span><b>'+clockStr(tr.schedArrive)+'</b></span>'
+          + '<span class="ttime"><span class="tlbl">Berangkat</span><b>'+clockStr(tr.schedDepart)+'</b></span>'
+          + '</span>'
           + '<span><span class="nm">KA '+tr.id+' · '+tr.name+'</span><br>'
-          + '<span class="mt">'+tr.from+' '+(tr.dir===1?"→":"←")+' '+tr.to+' · Rencana Jalur '+tr.planned+(tr.dwellTotal===0?" · langsung":"")+'</span></span>'
+          + '<span class="mt">'+tr.from+' '+(tr.dir===1?"→":"←")+' '+tr.to+' · Rencana Jalur '+tr.planned+(tr.dwellTotal===0?" · melintas langsung":" · berhenti "+tr.dwellTotal+" mnt")+'</span>'
+          + act + '</span>'
           + statusChip(tr) + '</button>';
       });
       $("ttBody").innerHTML = html;
       var rows = $("ttBody").querySelectorAll(".ttrow");
       for (var i=0;i<rows.length;i++) rows[i].addEventListener("click", function(){ selectTrain(this.dataset.id); });
+      var nx = $("ttNext");
+      if (nx){
+        var next = null;
+        for (var j=0;j<G.trains.length;j++){ var t2 = G.trains[j];
+          if (["scheduled","approach","waiting","entering","arriving"].indexOf(t2.state)>=0){ next = t2; break; } }
+        if (!next) nx.textContent = "Semua kereta sudah tiba di Stasiun Sukamaju.";
+        else if (next.state==="scheduled") nx.innerHTML = "Kedatangan berikutnya: <strong>KA "+next.id+" · "+next.name+"</strong> — datang <span class=\"mono\">"+clockStr(next.schedArrive)+"</span> · berangkat <span class=\"mono\">"+clockStr(next.schedDepart)+"</span> (Jalur rencana "+next.planned+", ±"+Math.max(0, Math.round(next.schedArrive - G.t))+" mnt lagi)";
+        else nx.innerHTML = "Sedang ditangani: <strong>KA "+next.id+" · "+next.name+"</strong> — jadwal datang <span class=\"mono\">"+clockStr(next.schedArrive)+"</span> · berangkat <span class=\"mono\">"+clockStr(next.schedDepart)+"</span>";
+      }
     }
     function selectTrain(id){
       G.selected = id;
@@ -862,7 +928,7 @@
       var outSig = tr.dir===1 ? "Sinyal Keluar Timur" : "Sinyal Keluar Barat";
       switch(tr.state){
         case "scheduled":
-          h = "Berangkat dari "+tr.from+" pukul "+clockStr(tr.spawn)+", rencana masuk Jalur "+tr.planned+". Siapkan wesel "+inSide+" dari sekarang."; break;
+          h = "Berangkat dari "+tr.from+" pukul "+clockStr(tr.spawn)+". Jadwal datang di Sukamaju "+clockStr(tr.schedArrive)+", berangkat lagi "+clockStr(tr.schedDepart)+" ke "+tr.to+" — rencana Jalur "+tr.planned+". Siapkan wesel "+inSide+" dari sekarang."; break;
         case "approach":
           h = "Sedang mendekat. Atur Wesel "+inSide+" ke Jalur "+suggestedTrack(tr)+", lalu buka "+inSig+" sebelum ia berhenti terlalu lama."; break;
         case "waiting":
@@ -873,11 +939,11 @@
             ? "KA barang melintas Jalur "+tr.track+". Cepat: atur Wesel "+outSide+" ke Jalur "+tr.track+" dan buka "+outSig+" supaya tidak perlu berhenti."
             : "Sedang menuju peron Jalur "+tr.track+". Setelah berhenti, siapkan rute keluarnya."; break;
         case "dwell":
-          h = "Naik-turun penumpang di Jalur "+tr.track+", sisa ±"+Math.ceil(tr.dwellLeft)+" menit. Siapkan Wesel "+outSide+" ke Jalur "+tr.track+"."; break;
+          h = "Datang pukul "+clockStr(tr.actualArrive!==null ? tr.actualArrive : tr.schedArrive)+". Naik-turun penumpang di Jalur "+tr.track+", sisa ±"+Math.ceil(tr.dwellLeft)+" menit — jadwal berangkat "+clockStr(tr.schedDepart)+". Siapkan Wesel "+outSide+" ke Jalur "+tr.track+"."; break;
         case "ready":
-          h = "Siap berangkat dari Jalur "+tr.track+". Atur Wesel "+outSide+" ke Jalur "+tr.track+", lalu buka "+outSig+"."; break;
+          h = "Siap berangkat dari Jalur "+tr.track+" — jadwal berangkat "+clockStr(tr.schedDepart)+". Atur Wesel "+outSide+" ke Jalur "+tr.track+", lalu buka "+outSig+"."; break;
         case "exiting": h = "Sedang berangkat ke "+tr.to+". Wesel "+outSide+" terkunci sampai kereta keluar wilayah stasiun."; break;
-        case "done": h = "Sudah tiba di lintas berikutnya menuju "+tr.to+". Keterlambatan akhir: "+tr.delay+" menit."; break;
+        case "done": h = "Sudah tiba di lintas berikutnya menuju "+tr.to+"." + (tr.actualDepart!==null ? " Berangkat aktual "+clockStr(tr.actualDepart)+" (jadwal "+clockStr(tr.schedDepart)+")." : "") + " Keterlambatan akhir: "+tr.delay+" menit."; break;
       }
       $("selHint").textContent = h;
     }
@@ -1358,26 +1424,45 @@
       }
       hangingSign(-9,-5.5,"JALUR 1","Ke Bandung • Jakarta"); hangingSign(9,-5.5,"JALUR 2","Ke Surabaya • Garut");
       hangingSign(0,5.5,"PERON 2","Ruang Tunggu • Keluar →");
-      // Departure board on Peron 1
+      // Departure board on Peron 1 — now shows BOTH jam datang & jam berangkat per train
       (function(){
         var bc = document.createElement("canvas"); bc.width=640; bc.height=320; var bx2=bc.getContext("2d");
         bx2.fillStyle="#0b1622"; bx2.fillRect(0,0,640,320); bx2.fillStyle="#ffb020"; bx2.fillRect(0,0,640,52);
-        bx2.fillStyle="#0b1622"; bx2.font="800 28px monospace"; bx2.textAlign="left"; bx2.fillText("  KEBERANGKATAN — SUKAMAJU",10,36);
-        bx2.font="600 24px monospace"; var rows=[["06:05","LOKAL","BANDUNG","J1"],["06:50","FAJAR UTAMA","JAKARTA","J2"],["07:35","PETI KEMAS","SURABAYA","J2"],["08:20","SANCAKA","BANDUNG","J1"],["09:05","TURANGGA","SURABAYA","J3"]];
-        rows.forEach(function(r,i){ var y=92+i*42; bx2.fillStyle=i%2?"#12263a":"#0e1e30"; bx2.fillRect(0,y-28,640,38); bx2.fillStyle="#e6f0f8"; bx2.fillText(r[0],14,y); bx2.fillText(r[1],120,y); bx2.fillText(r[2],330,y); bx2.fillStyle="#7ee787"; bx2.fillText(r[3],570,y); });
+        bx2.fillStyle="#0b1622"; bx2.font="800 26px monospace"; bx2.textAlign="left"; bx2.fillText("  DATANG · BERANGKAT — SUKAMAJU",10,36);
+        bx2.fillStyle="#8fb4d6"; bx2.font="700 16px monospace";
+        bx2.fillText("DATANG",14,80); bx2.fillText("KERETA",104,80); bx2.fillText("TUJUAN",322,80); bx2.fillText("BERANGKAT",466,80); bx2.fillText("JL",592,80);
+        bx2.font="600 21px monospace";
+        var rows = TRAINS.slice(0,5).map(function(tr){
+          return [clockStr(tr.spawn+40), tr.name.toUpperCase().slice(0,15), tr.to.toUpperCase().slice(0,10), clockStr(tr.spawn+40+tr.dwell), "J"+tr.planned];
+        });
+        rows.forEach(function(r,i){ var y=118+i*40; bx2.fillStyle=i%2?"#12263a":"#0e1e30"; bx2.fillRect(0,y-26,640,36); bx2.fillStyle="#ffd98a"; bx2.fillText(r[0],14,y); bx2.fillStyle="#e6f0f8"; bx2.fillText(r[1],104,y); bx2.fillText(r[2],322,y); bx2.fillStyle="#ffd98a"; bx2.fillText(r[3],466,y); bx2.fillStyle="#7ee787"; bx2.fillText(r[4],592,y); });
         var tex=new THREE.CanvasTexture(bc); var board=new THREE.Mesh(new THREE.PlaneGeometry(5.6,2.8), new THREE.MeshBasicMaterial({map:tex})); board.position.set(-16,3.1,-3.55); world.add(board);
         box(world,5.8,3.0,0.18,-16,3.1,-3.68,stdMat(0x1a2a3a,0.7,0.2),false);
       })();
-      // Station clock (double-sided disc)
+      // Station clock — LIVE double-sided disc: hands follow Jam Dinas,
+      // redrawn once per game minute through S3.stationClock (see updateScene3D)
+      var stationClockObj = null;
       (function(){
         var cc=document.createElement("canvas"); cc.width=256; cc.height=256; var cx2=cc.getContext("2d");
-        cx2.fillStyle="#fff"; cx2.beginPath(); cx2.arc(128,128,122,0,7); cx2.fill(); cx2.strokeStyle="#14232f"; cx2.lineWidth=10; cx2.stroke();
-        cx2.fillStyle="#14232f"; cx2.font="800 28px sans-serif"; cx2.textAlign="center";
-        for(var h=1;h<=12;h++){ var a=h*Math.PI/6; cx2.fillText(String(h),128+Math.sin(a)*92,140-Math.cos(a)*92); }
-        cx2.strokeStyle="#14232f"; cx2.lineWidth=8; cx2.beginPath(); cx2.moveTo(128,128); cx2.lineTo(128+38,128-52); cx2.stroke(); cx2.lineWidth=6; cx2.beginPath(); cx2.moveTo(128,128); cx2.lineTo(128+62,128+18); cx2.stroke();
-        cx2.fillStyle="#c0392b"; cx2.beginPath(); cx2.arc(128,128,10,0,7); cx2.fill();
-        var tex=new THREE.CanvasTexture(cc); var cm=new THREE.MeshBasicMaterial({map:tex,transparent:true});
+        var tex=new THREE.CanvasTexture(cc);
+        function drawClock(totalMin){
+          var mm = totalMin % 60, hh = (totalMin/60) % 12;
+          cx2.clearRect(0,0,256,256);
+          cx2.fillStyle="#fff"; cx2.beginPath(); cx2.arc(128,128,122,0,7); cx2.fill(); cx2.strokeStyle="#14232f"; cx2.lineWidth=10; cx2.stroke();
+          cx2.fillStyle="#14232f"; cx2.font="800 28px sans-serif"; cx2.textAlign="center";
+          for(var h=1;h<=12;h++){ var a=h*Math.PI/6; cx2.fillText(String(h),128+Math.sin(a)*92,140-Math.cos(a)*92); }
+          var ha=(hh+mm/60)*Math.PI/6, ma=mm*Math.PI/30;
+          cx2.strokeStyle="#14232f"; cx2.lineCap="round";
+          cx2.lineWidth=11; cx2.beginPath(); cx2.moveTo(128,128); cx2.lineTo(128+Math.sin(ha)*54,128-Math.cos(ha)*54); cx2.stroke();
+          cx2.lineWidth=7; cx2.beginPath(); cx2.moveTo(128,128); cx2.lineTo(128+Math.sin(ma)*82,128-Math.cos(ma)*82); cx2.stroke();
+          cx2.fillStyle="#c0392b"; cx2.beginPath(); cx2.arc(128,128,10,0,7); cx2.fill();
+          tex.needsUpdate = true;
+        }
+        drawClock(360);
+        stationClockObj = { draw: drawClock, last: 0 };
+        var cm=new THREE.MeshBasicMaterial({map:tex,transparent:true});
         var d1=new THREE.Mesh(new THREE.CircleGeometry(0.85,24),cm); d1.position.set(0,4.6,18.55); d1.rotation.y=Math.PI; world.add(d1);
+        var d2=new THREE.Mesh(new THREE.CircleGeometry(0.85,24),cm); d2.position.set(0,4.6,18.55); world.add(d2);
         var pole2=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,1.2,8),benchIron); pole2.position.set(0,5.55,18.55); world.add(pole2);
       })();
       // Fence + road in front of station + extra greenery
@@ -1595,6 +1680,7 @@
 
       S3 = {
         scene: scene, camera: camera, renderer: renderer, container: container,
+        stationClock: stationClockObj,
         railMats: railMats, switchBeds: switchBeds, signalObjs: signalObjs,
         switchObjs: switchObjs, closureGroup: closureGroup, trainObjs: trainObjs,
         clickables: clickables, passengers: platformPassengers, animT: 0,
@@ -1721,6 +1807,8 @@
     }
     function updateScene3D(){
       var n, side;
+      /* station clock follows Jam Dinas — redraw once per game minute */
+      if (S3.stationClock){ var cmin = Math.floor(G.t); if (S3.stationClock.last !== cmin){ S3.stationClock.last = cmin; S3.stationClock.draw(360 + G.t); } }
       /* signals */
       SIG_DEFS.forEach(function(d){
         var o = S3.signalObjs[d.key]; if (!o) return;
