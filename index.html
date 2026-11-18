@@ -97,7 +97,46 @@
       .legend{ display:flex; flex-wrap:wrap; gap:6px 16px; padding:9px 14px 12px; font-size:.76rem; color:var(--muted); font-weight:600; }
       .legend .dot{ display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
 
-      /* ---------- Petunjuk klik 3D (euweuh tombol panel deui) ---------- */
+      /* ---------- Panel tombol wesel & sinyal ---------- */
+      .ctlpanel{ margin:12px 14px 0; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+      @media (max-width:640px){ .ctlpanel{ grid-template-columns:1fr; } }
+      .ctlgroup{ border:1px solid var(--line); border-radius:11px; padding:10px 12px 12px; background:var(--panel2); }
+      .ctlgroup.wide{ grid-column:1 / -1; }
+      .ctlhead{
+        display:flex; justify-content:space-between; align-items:baseline; gap:8px;
+        font-size:.76rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
+        color:var(--muted); margin-bottom:8px;
+      }
+      .ctlhead .st{ color:var(--amber); text-transform:none; letter-spacing:0; font-size:.78rem; text-align:right; }
+      .ctlrow{ display:flex; gap:6px; }
+      .swbtn{
+        flex:1; appearance:none; border:1.5px solid var(--line2); background:var(--panel); color:var(--ink);
+        border-radius:9px; padding:9px 4px 7px; min-height:48px; cursor:pointer;
+        font:700 .92rem "IBM Plex Sans", sans-serif; line-height:1.15;
+      }
+      .swbtn:hover{ border-color:var(--amber); }
+      .swbtn.on{ background:var(--amber); border-color:var(--amber); color:#fff; }
+      .swbtn .swtag{ display:block; font-size:.6rem; font-weight:800; letter-spacing:.06em; color:var(--red); min-height:.72rem; }
+      .swbtn.on .swtag{ color:#ffe1e1; }
+      .swbtn:focus-visible, .sigbtn:focus-visible{ outline:3px solid var(--amber); outline-offset:2px; }
+      .siggrid{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+      @media (max-width:480px){ .siggrid{ grid-template-columns:1fr; } }
+      .sigbtn{
+        display:flex; align-items:center; gap:9px; text-align:left; width:100%;
+        appearance:none; border:1.5px solid var(--line2); background:var(--panel); color:var(--ink);
+        border-radius:9px; padding:9px 11px; min-height:50px; cursor:pointer;
+        font-family:"IBM Plex Sans", sans-serif;
+      }
+      .sigbtn:hover{ border-color:var(--amber); }
+      .sigbtn.open{ border-color:var(--green); }
+      .sigdot{ width:15px; height:15px; border-radius:50%; flex:none; background:#ff2a18; box-shadow:0 0 9px rgba(255,42,24,.85); }
+      .sigbtn.open .sigdot{ background:#22e04e; box-shadow:0 0 9px rgba(34,224,78,.85); }
+      .sigbtn .signame{ font-weight:700; font-size:.86rem; line-height:1.2; }
+      .sigbtn .signame small{ display:block; font-weight:600; font-size:.68rem; color:var(--muted); }
+      .sigbtn .sigstate{ margin-left:auto; font-size:.72rem; font-weight:800; letter-spacing:.04em; color:var(--red); flex:none; }
+      .sigbtn.open .sigstate{ color:var(--green); }
+
+      /* ---------- Petunjuk klik 3D ---------- */
       .clickhint{
         margin:12px 14px 0; padding:10px 13px; border:1px dashed var(--amber);
         background:var(--amber-bg); border-radius:11px; font-size:.85rem; line-height:1.55;
@@ -249,6 +288,7 @@
         #board3d{ aspect-ratio:auto; height:calc(100dvh - 148px); min-height:250px; }
         body.is-landscape #board3d{ aspect-ratio:auto; height:calc(100dvh - 148px); }
         .legend{ padding:6px 10px 8px; font-size:.7rem; gap:4px 10px; }
+        .ctlpanel{ margin:8px 10px 0; gap:8px; }
         .clickhint{ margin:8px 10px 0; padding:8px 10px; }
         .selbox{ margin:8px 10px 10px; padding:8px 10px; }
         .loglist{ max-height:170px; }
@@ -301,6 +341,7 @@
       body.is-rotated.is-landscape .card .chead .sub{ font-size:.68rem; }
       body.is-rotated.is-landscape #board3d{ aspect-ratio:auto; height:calc(100dvw - 196px); min-height:215px; }
       body.is-rotated.is-landscape .legend{ padding:6px 10px 8px; font-size:.7rem; gap:4px 10px; }
+      body.is-rotated.is-landscape .ctlpanel{ margin:8px 10px 0; gap:8px; }
       body.is-rotated.is-landscape .clickhint{ margin:8px 10px 0; padding:8px 10px; }
       body.is-rotated.is-landscape .selbox{ margin:8px 10px 10px; padding:8px 10px; }
       body.is-rotated.is-landscape .rightcol{ position:sticky; top:8px; max-height:calc(100dvw - 16px); overflow:auto; scrollbar-width:thin; }
@@ -349,7 +390,7 @@
                 <button type="button" data-view="peron">🚉 Dari Peron</button>
                 <button type="button" data-view="samping">🚆 Samping Rel</button>
               </div>
-              <div class="camhint">Seret = putar · Scroll / cubit = zoom · Klik kereta, wesel, sinyal untuk mengatur</div>
+              <div class="camhint">Seret = putar · Scroll / cubit = zoom · Atur wesel &amp; sinyal lewat panel tombol di bawah</div>
               <div class="eventbanner" id="eventBanner"></div>
             </div>
             <div class="legend">
@@ -358,17 +399,45 @@
               <span><span class="dot" style="background:#1f6f8b"></span>KA Barang — kontainer warna-warni</span>
               <span><span class="dot" style="background:#2fbf5a"></span>Sinyal jalan</span>
               <span><span class="dot" style="background:#e0483e"></span>Sinyal berhenti / jalur terisi</span>
-              <span>Di peron ada penumpang menunggu, duduk di bangku, berjalan, dan bergegas naik saat kereta berhenti (dwell). Masinis terlihat di kabin lokomotif. Klik kereta, wesel, atau sinyal langsung di pandangan 3D untuk mengatur.</span>
+              <span>Di peron ada penumpang menunggu, duduk di bangku, berjalan, dan bergegas naik saat kereta berhenti (dwell). Masinis terlihat di kabin lokomotif. Wesel dan sinyal diatur lewat panel tombol di bawah pandangan 3D; klik langsung di 3D juga bisa.</span>
               <span>Peron paling ujung sisi utara (peuntas Jalur 1) kini diisi gedung stasiun kedua — Pintu Utara — dengan loket, ruang tunggu, dan teras beratap.</span>
             </div>
 
+            <div class="ctlpanel" role="group" aria-label="Panel kontrol wesel dan sinyal">
+              <div class="ctlgroup">
+                <div class="ctlhead"><span>Wesel Barat · W1</span><span class="st" id="swWState">Aktif → Jalur 2</span></div>
+                <div class="ctlrow">
+                  <button type="button" class="swbtn" data-sw="W" data-track="1">Jalur 1<span class="swtag"></span></button>
+                  <button type="button" class="swbtn" data-sw="W" data-track="2">Jalur 2<span class="swtag"></span></button>
+                  <button type="button" class="swbtn" data-sw="W" data-track="3">Jalur 3<span class="swtag"></span></button>
+                </div>
+              </div>
+              <div class="ctlgroup">
+                <div class="ctlhead"><span>Wesel Timur · W2</span><span class="st" id="swEState">Aktif → Jalur 2</span></div>
+                <div class="ctlrow">
+                  <button type="button" class="swbtn" data-sw="E" data-track="1">Jalur 1<span class="swtag"></span></button>
+                  <button type="button" class="swbtn" data-sw="E" data-track="2">Jalur 2<span class="swtag"></span></button>
+                  <button type="button" class="swbtn" data-sw="E" data-track="3">Jalur 3<span class="swtag"></span></button>
+                </div>
+              </div>
+              <div class="ctlgroup wide">
+                <div class="ctlhead"><span>Sinyal — tekan untuk buka / tutup</span><span class="st">Hijau = jalan · Merah = berhenti</span></div>
+                <div class="siggrid">
+                  <button type="button" class="sigbtn" data-sig="inW"><span class="sigdot"></span><span class="signame">Masuk Barat<small>kereta dari barat masuk stasiun</small></span><span class="sigstate">BERHENTI</span></button>
+                  <button type="button" class="sigbtn" data-sig="inE"><span class="sigdot"></span><span class="signame">Masuk Timur<small>kereta dari timur masuk stasiun</small></span><span class="sigstate">BERHENTI</span></button>
+                  <button type="button" class="sigbtn" data-sig="outW"><span class="sigdot"></span><span class="signame">Keluar Barat<small>berangkat ke arah barat</small></span><span class="sigstate">BERHENTI</span></button>
+                  <button type="button" class="sigbtn" data-sig="outE"><span class="sigdot"></span><span class="signame">Keluar Timur<small>berangkat ke arah timur</small></span><span class="sigstate">BERHENTI</span></button>
+                </div>
+              </div>
+            </div>
+
             <div class="clickhint" role="note">
-              <b>Kontrolna klik 3D wungkul</b> — euweuh tombol panel deui: klik <b>penanda wesel W1 / W2</b> di pandangan 3D pikeun ngagilir jalur tujuan (labelna mintonkeun jalur nu keur aktif, atawa “KUNCI” mun keur diliwatan kereta), klik <b>tiang sinyal</b> pikeun muka / nutup sinyal (lampu héjo = jalan, beureum = berhenti), jeung klik <b>kereta</b> pikeun milihna.
+              <b>Kontrol utama: panel tombol di atas.</b> Tekan tombol <b>Jalur 1 / 2 / 3</b> untuk mengarahkan wesel W1 (barat) atau W2 (timur) — tombol yang menyala menunjukkan jalur aktif. Tekan tombol <b>sinyal</b> untuk membuka / menutupnya: titik hijau dan tulisan JALAN berarti sinyal terbuka. Klik langsung di pandangan 3D (penanda wesel, tiang sinyal, kereta) juga masih bisa dipakai.
             </div>
 
             <div class="selbox" id="selBox">
               <div class="t" id="selTitle">Belum ada kereta dipilih</div>
-              <p id="selHint">Klik kereta di pandangan 3D atau baris di jadwal GAPEKA. Panel ini akan memberi tahu langkah berikutnya: penanda wesel mana yang diklik ke jalur mana, tiang sinyal mana yang diklik untuk dibuka.</p>
+              <p id="selHint">Klik kereta di pandangan 3D atau baris di jadwal GAPEKA. Panel ini akan memberi tahu langkah berikutnya: tombol wesel mana yang ditekan ke jalur mana, tombol sinyal mana yang ditekan untuk dibuka.</p>
             </div>
           </section>
 
@@ -376,7 +445,7 @@
             <summary>Cara main &amp; aturan keselamatan</summary>
             <div class="body">
               <ol>
-                <li><strong>Kamera 3D:</strong> seret untuk memutar, scroll atau cubit untuk zoom. Pakai tombol Bebas / Dari Atas / Dari Peron / Samping Rel untuk sudut cepat. Semua pengaturan dilakukan dengan klik di dunia 3D: klik kereta untuk memilihnya, klik penanda wesel W1/W2 untuk menggilir jalur tujuan, dan klik tiang sinyal untuk membuka / menutupnya.</li>
+                <li><strong>Kamera 3D:</strong> seret untuk memutar, scroll atau cubit untuk zoom. Pakai tombol Bebas / Dari Atas / Dari Peron / Samping Rel untuk sudut cepat. Pengaturan utama lewat <strong>panel tombol</strong> di bawah pandangan 3D: tombol Jalur 1/2/3 mengarahkan wesel W1/W2, tombol sinyal membuka / menutup sinyal. Klik di dunia 3D (kereta, penanda wesel, tiang sinyal) juga tetap bisa dipakai.</li>
                 <li><strong>Terima kereta:</strong> kereta mendekat dari barat (→ ke timur) atau timur (← ke barat) dan berhenti di sinyal masuk kalau sinyalnya merah.</li>
                 <li><strong>Atur wesel</strong> sisi kedatangan ke jalur tujuan (ikuti <em>rencana jalur</em> di GAPEKA untuk poin bonus), pastikan jalur itu kosong.</li>
                 <li><strong>Buka sinyal masuk</strong> — sistem interlocking menolak kalau jalur terisi, tertutup, atau wesel terkunci; penolakan tercatat sebagai peringatan.</li>
@@ -549,19 +618,41 @@
     function sndArrive(){ beep(520,.1,"sine"); beep(660,.14,"sine",.1); }
 
     /* ================= CONTROLS ================= */
+    var controlsBuilt = false;
     function buildControls(){
-      /* Tombol panel wesel & sinyal geus dicabut (pamundut pamake):
-         sagala pangaturan ayeuna klik 3D wungkul — penanda wesel W1/W2
-         jeung tiang sinyal di dunya 3D. Fungsi ieu dipertahankeun sabab
-         resetGame() jeung kajadian panutupan Jalur 3 masih manggilna. */
+      /* Panel tombol wesel & sinyal dipasang deui (pamundut pamake:
+         kontrol klik 3D karasa susah). Listener dipasang sakali wungkul;
+         buildControls() dipanggil deui ku resetGame() jeung kajadian
+         panutupan Jalur 3 — harita cukup nyingkronkeun kaayaan tombol. */
+      if (!controlsBuilt){
+        controlsBuilt = true;
+        document.querySelectorAll(".swbtn").forEach(function(b){
+          b.addEventListener("click", function(){ setSwitch(b.dataset.sw, +b.dataset.track, b); });
+        });
+        document.querySelectorAll(".sigbtn").forEach(function(b){
+          b.addEventListener("click", function(){ toggleSignal(b.dataset.sig, b); });
+        });
+      }
       refreshControls();
     }
     function refreshControls(){
-      /* Euweuh elemen tombol deui nu kudu disingkronkeun — kaayaan wesel
-         & sinyal ditembongkeun langsung di 3D ku updateScene3D(): label
-         penanda wesel mintonkeun jalur aktif / KUNCI, lampu tiang sinyal
-         héjo (jalan) atawa beureum (berhenti), sarta rel jalur nu kaeusi
-         diwarnaan. draw() salajengna ngapdet tampilanna. */
+      if (!G) return;
+      document.querySelectorAll(".swbtn").forEach(function(b){
+        var side = b.dataset.sw, n = +b.dataset.track;
+        b.classList.toggle("on", G.sw[side] === n);
+        var tag = b.querySelector(".swtag");
+        if (tag) tag.textContent = (closureActive() && n === 3) ? "DITUTUP" : "";
+      });
+      ["W","E"].forEach(function(side){
+        var st = $(side === "W" ? "swWState" : "swEState");
+        if (st) st.textContent = switchLocked(side) ? "Terkunci — kereta melintas" : "Aktif → Jalur " + G.sw[side];
+      });
+      document.querySelectorAll(".sigbtn").forEach(function(b){
+        var open = !!G.sig[b.dataset.sig];
+        b.classList.toggle("open", open);
+        var st = b.querySelector(".sigstate");
+        if (st) st.textContent = open ? "JALAN" : "BERHENTI";
+      });
     }
     var denyBannerTimer = 0;
     function flashDenyBanner(msg){
@@ -876,20 +967,20 @@
       var outSig = tr.dir===1 ? "Sinyal Keluar Timur" : "Sinyal Keluar Barat";
       switch(tr.state){
         case "scheduled":
-          h = "Berangkat dari "+tr.from+" pukul "+clockStr(tr.spawn)+". Jadwal datang di Sukamaju "+clockStr(tr.schedArrive)+", berangkat lagi "+clockStr(tr.schedDepart)+" ke "+tr.to+" — rencana Jalur "+tr.planned+". Siapkan dari sekarang: klik penanda wesel "+inSide+" di pandangan 3D."; break;
+          h = "Berangkat dari "+tr.from+" pukul "+clockStr(tr.spawn)+". Jadwal datang di Sukamaju "+clockStr(tr.schedArrive)+", berangkat lagi "+clockStr(tr.schedDepart)+" ke "+tr.to+" — rencana Jalur "+tr.planned+". Siapkan dari sekarang: tekan tombol Wesel "+inSide+" → Jalur "+tr.planned+" di panel kontrol."; break;
         case "approach":
-          h = "Sedang mendekat. Klik penanda Wesel "+inSide+" di 3D sampai ke Jalur "+suggestedTrack(tr)+", lalu klik tiang "+inSig+" untuk membukanya sebelum ia berhenti terlalu lama."; break;
+          h = "Sedang mendekat. Tekan tombol Wesel "+inSide+" → Jalur "+suggestedTrack(tr)+" di panel, lalu tekan tombol "+inSig+" untuk membukanya sebelum ia berhenti terlalu lama."; break;
         case "waiting":
-          h = "Tertahan di sinyal masuk! Klik penanda Wesel "+inSide+" di 3D sampai ke Jalur "+suggestedTrack(tr)+" (pastikan kosong), lalu klik tiang "+inSig+" untuk membukanya."; break;
+          h = "Tertahan di sinyal masuk! Tekan tombol Wesel "+inSide+" → Jalur "+suggestedTrack(tr)+" di panel (pastikan kosong), lalu tekan tombol "+inSig+" untuk membukanya."; break;
         case "entering": h = "Sedang masuk ke Jalur "+tr.track+". Wesel "+inSide+" terkunci sampai kereta lewat."; break;
         case "arriving":
           h = tr.dwellTotal===0
-            ? "KA barang melintas Jalur "+tr.track+". Cepat: klik penanda Wesel "+outSide+" di 3D sampai ke Jalur "+tr.track+" dan klik tiang "+outSig+" untuk membukanya supaya tidak perlu berhenti."
+            ? "KA barang melintas Jalur "+tr.track+". Cepat: tekan tombol Wesel "+outSide+" → Jalur "+tr.track+" di panel dan tekan tombol "+outSig+" untuk membukanya supaya tidak perlu berhenti."
             : "Sedang menuju peron Jalur "+tr.track+". Setelah berhenti, siapkan rute keluarnya."; break;
         case "dwell":
-          h = "Datang pukul "+clockStr(tr.actualArrive!==null ? tr.actualArrive : tr.schedArrive)+". Naik-turun penumpang di Jalur "+tr.track+", sisa ±"+Math.ceil(tr.dwellLeft)+" menit — jadwal berangkat "+clockStr(tr.schedDepart)+". Siapkan keberangkatan: klik penanda Wesel "+outSide+" di 3D sampai ke Jalur "+tr.track+"."; break;
+          h = "Datang pukul "+clockStr(tr.actualArrive!==null ? tr.actualArrive : tr.schedArrive)+". Naik-turun penumpang di Jalur "+tr.track+", sisa ±"+Math.ceil(tr.dwellLeft)+" menit — jadwal berangkat "+clockStr(tr.schedDepart)+". Siapkan keberangkatan: tekan tombol Wesel "+outSide+" → Jalur "+tr.track+" di panel."; break;
         case "ready":
-          h = "Siap berangkat dari Jalur "+tr.track+" — jadwal berangkat "+clockStr(tr.schedDepart)+". Klik penanda Wesel "+outSide+" di 3D sampai ke Jalur "+tr.track+", lalu klik tiang "+outSig+" untuk membukanya."; break;
+          h = "Siap berangkat dari Jalur "+tr.track+" — jadwal berangkat "+clockStr(tr.schedDepart)+". Tekan tombol Wesel "+outSide+" → Jalur "+tr.track+" di panel, lalu tekan tombol "+outSig+" untuk membukanya."; break;
         case "exiting": h = "Sedang berangkat ke "+tr.to+". Wesel "+outSide+" terkunci sampai kereta keluar wilayah stasiun."; break;
         case "done": h = "Sudah tiba di lintas berikutnya menuju "+tr.to+"." + (tr.actualDepart!==null ? " Berangkat aktual "+clockStr(tr.actualDepart)+" (jadwal "+clockStr(tr.schedDepart)+")." : "") + " Keterlambatan akhir: "+tr.delay+" menit."; break;
       }
@@ -967,7 +1058,7 @@
       if (!container) { S3 = { failed: true }; return; }
       if (typeof THREE === "undefined"){
         S3 = { failed: true };
-        container.innerHTML = '<div class="boardfallback">Pandangan 3D membutuhkan pustaka Three.js dari internet dan gagal dimuat. Wesel &amp; sinyal diatur ku klik 3D, jadi periksa koneksi lalu muat ulang halaman supaya pandangan 3D-na jalan deui.</div>';
+        container.innerHTML = '<div class="boardfallback">Pandangan 3D membutuhkan pustaka Three.js dari internet dan gagal dimuat. Panel tombol wesel &amp; sinyal di bawah tetap bisa dipakai untuk mengatur stasiun; periksa koneksi lalu muat ulang halaman supaya pandangan 3D-na jalan deui.</div>';
         return;
       }
       var scene = new THREE.Scene();
