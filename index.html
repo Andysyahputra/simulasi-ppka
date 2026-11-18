@@ -63,7 +63,7 @@
       }
       .tbtn:hover{ border-color:var(--amber); }
       .tbtn.on{ background:var(--ink); color:var(--bg); border-color:var(--ink); }
-      .tbtn:focus-visible, .seg button:focus-visible, .sigbtn:focus-visible, .ttrow:focus-visible{ outline:3px solid var(--amber); outline-offset:2px; }
+      .tbtn:focus-visible, .ttrow:focus-visible, .viewbar button:focus-visible{ outline:3px solid var(--amber); outline-offset:2px; }
 
       /* ---------- Layout ---------- */
       .grid{ display:grid; grid-template-columns:minmax(0,1fr) 348px; gap:14px; margin-top:14px; align-items:start; }
@@ -97,32 +97,12 @@
       .legend{ display:flex; flex-wrap:wrap; gap:6px 16px; padding:9px 14px 12px; font-size:.76rem; color:var(--muted); font-weight:600; }
       .legend .dot{ display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
 
-      /* ---------- Controls ---------- */
-      .controls{ padding:12px 14px 4px; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-      @media (max-width:620px){ .controls{ grid-template-columns:1fr; } }
-      .ctl h3{ margin:0 0 7px; font-size:.7rem; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); }
-      .ctl h3 .locktag{ color:var(--red); letter-spacing:0; text-transform:none; }
-      .seg{ display:flex; gap:6px; }
-      .seg button{
-        flex:1; appearance:none; cursor:pointer; border:1px solid var(--line2); background:var(--panel2);
-        color:var(--ink); border-radius:9px; padding:8px 4px; font:700 .86rem "IBM Plex Sans", sans-serif;
+      /* ---------- Petunjuk klik 3D (euweuh tombol panel deui) ---------- */
+      .clickhint{
+        margin:12px 14px 0; padding:10px 13px; border:1px dashed var(--amber);
+        background:var(--amber-bg); border-radius:11px; font-size:.85rem; line-height:1.55;
       }
-      .seg button.on{ background:var(--amber); border-color:var(--amber); color:#fff; }
-      .seg button:disabled{ opacity:.45; cursor:not-allowed; }
-      .seg button .closed{ display:block; font-size:.62rem; font-weight:700; color:var(--red); }
-      .seg button.on .closed{ color:#ffe9c9; }
-      .siggrid{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-      @media (max-width:420px){ .siggrid{ grid-template-columns:1fr; } }
-      .sigbtn{
-        appearance:none; cursor:pointer; text-align:left; border:1px solid var(--line2); background:var(--panel2);
-        color:var(--ink); border-radius:9px; padding:7px 10px; font:600 .8rem "IBM Plex Sans", sans-serif;
-        display:flex; align-items:center; gap:9px; width:100%;
-      }
-      .sigbtn .lamp{ width:15px; height:15px; border-radius:50%; background:var(--red); flex:none; box-shadow:0 0 0 3px var(--red-bg); }
-      .sigbtn.open .lamp{ background:#2fbf5a; box-shadow:0 0 0 3px var(--green-bg); }
-      .sigbtn small{ display:block; font-size:.66rem; color:var(--muted); font-weight:600; }
-      .sigbtn .st{ margin-left:auto; font-family:"IBM Plex Mono", monospace; font-size:.68rem; font-weight:700; color:var(--red); flex:none; }
-      .sigbtn.open .st{ color:var(--green); }
+      .clickhint b{ color:var(--amber); }
       @media (prefers-reduced-motion: no-preference){
         .shake{ animation:shk .3s ease; }
         @keyframes shk{ 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
@@ -240,9 +220,6 @@
       body.is-landscape .hud::-webkit-scrollbar{ display:none; }
       body.is-landscape .hud .stat{ flex:1 1 0; min-width:96px; }
       body.is-landscape .hud .tools{ flex:none; flex-wrap:nowrap; }
-      body.is-landscape .controls{ grid-template-columns:1fr 1fr 1.35fr; }
-      body.is-landscape .controls .ctl:last-child{ grid-column:auto !important; }
-      body.is-landscape .siggrid{ grid-template-columns:1fr 1fr; }
       body.is-landscape .rightcol{ position:sticky; top:10px; max-height:calc(100dvh - 20px); overflow:auto; padding-right:2px; scrollbar-width:thin; }
       body.is-landscape .rightcol .loglist{ max-height:260px; }
 
@@ -253,8 +230,6 @@
         .hud{ padding:8px; gap:6px; }
         .hud .stat{ padding:6px 10px 7px; }
         .hud .stat .v{ font-size:1.16rem; }
-        .controls{ grid-template-columns:1fr 1fr 1.35fr; }
-        .controls .ctl:last-child{ grid-column:auto !important; }
         .rightcol{ position:sticky; top:10px; max-height:calc(100dvh - 20px); overflow:auto; scrollbar-width:thin; }
       }
       /* HP landscape: jangkungna pondok pisan — sagalana kudu muat salayar */
@@ -274,7 +249,7 @@
         #board3d{ aspect-ratio:auto; height:calc(100dvh - 148px); min-height:250px; }
         body.is-landscape #board3d{ aspect-ratio:auto; height:calc(100dvh - 148px); }
         .legend{ padding:6px 10px 8px; font-size:.7rem; gap:4px 10px; }
-        .controls{ padding:8px 10px 2px; gap:8px; }
+        .clickhint{ margin:8px 10px 0; padding:8px 10px; }
         .selbox{ margin:8px 10px 10px; padding:8px 10px; }
         .loglist{ max-height:170px; }
         details.howto{ margin-top:8px; }
@@ -283,18 +258,12 @@
       @media (orientation: landscape) and (max-width:860px){
         .grid{ grid-template-columns:minmax(0,1fr) 280px; }
         body.is-landscape .grid{ grid-template-columns:minmax(0,1fr) 280px; }
-        .controls{ grid-template-columns:1fr 1fr; }
-        body.is-landscape .controls{ grid-template-columns:1fr 1fr; }
-        .controls .ctl:last-child{ grid-column:1/-1 !important; }
-        body.is-landscape .controls .ctl:last-child{ grid-column:1/-1 !important; }
       }
       /* Mun landscape dipaksa tapi alatna masih potret, board tetep lega
          tur parentah muter ditembongkeun ku JS (kelas .show). */
       body.is-landscape:not(.is-wide) #board3d{ aspect-ratio:16/9; }
       @media (max-width:700px) and (orientation: portrait){
         body.is-landscape .grid{ grid-template-columns:1fr; }
-        body.is-landscape .controls{ grid-template-columns:1fr; }
-        body.is-landscape .controls .ctl:last-child{ grid-column:1/-1 !important; }
         body.is-landscape .rightcol{ position:static; max-height:none; overflow:visible; }
         body.is-landscape .hud{ flex-wrap:wrap; overflow-x:visible; }
         body.is-landscape .hud .tools{ flex-wrap:wrap; }
@@ -332,9 +301,7 @@
       body.is-rotated.is-landscape .card .chead .sub{ font-size:.68rem; }
       body.is-rotated.is-landscape #board3d{ aspect-ratio:auto; height:calc(100dvw - 196px); min-height:215px; }
       body.is-rotated.is-landscape .legend{ padding:6px 10px 8px; font-size:.7rem; gap:4px 10px; }
-      body.is-rotated.is-landscape .controls{ grid-template-columns:1fr 1fr; padding:8px 10px 2px; gap:8px; }
-      body.is-rotated.is-landscape .controls .ctl:last-child{ grid-column:1/-1 !important; }
-      body.is-rotated.is-landscape .siggrid{ grid-template-columns:1fr 1fr; }
+      body.is-rotated.is-landscape .clickhint{ margin:8px 10px 0; padding:8px 10px; }
       body.is-rotated.is-landscape .selbox{ margin:8px 10px 10px; padding:8px 10px; }
       body.is-rotated.is-landscape .rightcol{ position:sticky; top:8px; max-height:calc(100dvw - 16px); overflow:auto; scrollbar-width:thin; }
       body.is-rotated .loglist{ max-height:170px; }
@@ -367,7 +334,7 @@
       <div class="landscape-hint" id="landscapeHint" role="status">Mode <b>Landscape</b> aktif — tampilanana geus <b>diputer 90°</b>, jadi <b>puter HP ka gigir</b> ayeuna: pandangan 3D-na lega sarta GAPEKA aya di sisi katuhu. Panel katuhu bisa di-scroll sorangan tanpa ngaganggu pandangan rel.</div>
 
       <div class="grid">
-        <!-- LEFT: board + controls -->
+        <!-- LEFT: board 3D + petunjuk klik -->
         <div>
           <section class="card">
             <div class="chead">
@@ -395,24 +362,13 @@
               <span>Peron paling ujung sisi utara (peuntas Jalur 1) kini diisi gedung stasiun kedua — Pintu Utara — dengan loket, ruang tunggu, dan teras beratap.</span>
             </div>
 
-            <div class="controls">
-              <div class="ctl">
-                <h3>Wesel Barat (W1) <span class="locktag" id="lockW"></span></h3>
-                <div class="seg" id="segW" role="group" aria-label="Wesel barat"></div>
-              </div>
-              <div class="ctl">
-                <h3>Wesel Timur (W2) <span class="locktag" id="lockE"></span></h3>
-                <div class="seg" id="segE" role="group" aria-label="Wesel timur"></div>
-              </div>
-              <div class="ctl" style="grid-column:1/-1">
-                <h3>Sinyal — klik untuk membuka / menutup</h3>
-                <div class="siggrid" id="sigGrid"></div>
-              </div>
+            <div class="clickhint" role="note">
+              <b>Kontrolna klik 3D wungkul</b> — euweuh tombol panel deui: klik <b>penanda wesel W1 / W2</b> di pandangan 3D pikeun ngagilir jalur tujuan (labelna mintonkeun jalur nu keur aktif, atawa “KUNCI” mun keur diliwatan kereta), klik <b>tiang sinyal</b> pikeun muka / nutup sinyal (lampu héjo = jalan, beureum = berhenti), jeung klik <b>kereta</b> pikeun milihna.
             </div>
 
             <div class="selbox" id="selBox">
               <div class="t" id="selTitle">Belum ada kereta dipilih</div>
-              <p id="selHint">Klik kereta di panel jalur atau baris di jadwal GAPEKA. Panel ini akan memberi tahu langkah berikutnya: wesel ke jalur mana, sinyal mana yang dibuka.</p>
+              <p id="selHint">Klik kereta di pandangan 3D atau baris di jadwal GAPEKA. Panel ini akan memberi tahu langkah berikutnya: penanda wesel mana yang diklik ke jalur mana, tiang sinyal mana yang diklik untuk dibuka.</p>
             </div>
           </section>
 
@@ -420,7 +376,7 @@
             <summary>Cara main &amp; aturan keselamatan</summary>
             <div class="body">
               <ol>
-                <li><strong>Kamera 3D:</strong> seret untuk memutar, scroll atau cubit untuk zoom. Pakai tombol Bebas / Dari Atas / Dari Peron / Samping Rel untuk sudut cepat. Klik kereta, tiang sinyal, atau penanda wesel W1/W2 langsung di dunia 3D — sama seperti tombol di bawahnya.</li>
+                <li><strong>Kamera 3D:</strong> seret untuk memutar, scroll atau cubit untuk zoom. Pakai tombol Bebas / Dari Atas / Dari Peron / Samping Rel untuk sudut cepat. Semua pengaturan dilakukan dengan klik di dunia 3D: klik kereta untuk memilihnya, klik penanda wesel W1/W2 untuk menggilir jalur tujuan, dan klik tiang sinyal untuk membuka / menutupnya.</li>
                 <li><strong>Terima kereta:</strong> kereta mendekat dari barat (→ ke timur) atau timur (← ke barat) dan berhenti di sinyal masuk kalau sinyalnya merah.</li>
                 <li><strong>Atur wesel</strong> sisi kedatangan ke jalur tujuan (ikuti <em>rencana jalur</em> di GAPEKA untuk poin bonus), pastikan jalur itu kosong.</li>
                 <li><strong>Buka sinyal masuk</strong> — sistem interlocking menolak kalau jalur terisi, tertutup, atau wesel terkunci; penolakan tercatat sebagai peringatan.</li>
@@ -594,49 +550,41 @@
 
     /* ================= CONTROLS ================= */
     function buildControls(){
-      ["W","E"].forEach(function(side){
-        var seg = $("seg"+side); seg.innerHTML = "";
-        [1,2,3].forEach(function(n){
-          var b = document.createElement("button"); b.type="button";
-          b.dataset.side = side; b.dataset.track = n;
-          b.innerHTML = "Jalur "+n + ((closureActive() && n===3) ? '<span class="closed">DITUTUP</span>' : "");
-          b.addEventListener("click", function(){ setSwitch(side, n, b); });
-          seg.appendChild(b);
-        });
-      });
-      var grid = $("sigGrid"); grid.innerHTML = "";
-      SIG_DEFS.forEach(function(d){
-        var b = document.createElement("button"); b.type="button"; b.className="sigbtn"; b.id="sig_"+d.key;
-        b.innerHTML = '<span class="lamp"></span><span>'+d.name+'<small>'+d.sub+'</small></span><span class="st">BERHENTI</span>';
-        b.addEventListener("click", function(){ toggleSignal(d.key, b); });
-        grid.appendChild(b);
-      });
+      /* Tombol panel wesel & sinyal geus dicabut (pamundut pamake):
+         sagala pangaturan ayeuna klik 3D wungkul — penanda wesel W1/W2
+         jeung tiang sinyal di dunya 3D. Fungsi ieu dipertahankeun sabab
+         resetGame() jeung kajadian panutupan Jalur 3 masih manggilna. */
       refreshControls();
     }
     function refreshControls(){
-      ["W","E"].forEach(function(side){
-        var seg = $("seg"+side); var locked = switchLocked(side);
-        for (var i=0;i<seg.children.length;i++){ var b=seg.children[i]; var n=+b.dataset.track;
-          b.classList.toggle("on", G.sw[side]===n);
-          b.disabled = !!locked;
-          var c = b.querySelector(".closed");
-          var shouldClose = closureActive() && n===3;
-          if (shouldClose && !c){ b.innerHTML = "Jalur "+n+'<span class="closed">DITUTUP</span>'; }
-          if (!shouldClose && c){ b.textContent = "Jalur "+n; }
-        }
-        $("lock"+side).textContent = locked ? "· terkunci (KA "+locked.id+" melintas)" : "";
-      });
-      SIG_DEFS.forEach(function(d){
-        var b = $("sig_"+d.key); if (!b) return;
-        b.classList.toggle("open", !!G.sig[d.key]);
-        b.querySelector(".st").textContent = G.sig[d.key] ? "JALAN" : "BERHENTI";
-      });
+      /* Euweuh elemen tombol deui nu kudu disingkronkeun — kaayaan wesel
+         & sinyal ditembongkeun langsung di 3D ku updateScene3D(): label
+         penanda wesel mintonkeun jalur aktif / KUNCI, lampu tiang sinyal
+         héjo (jalan) atawa beureum (berhenti), sarta rel jalur nu kaeusi
+         diwarnaan. draw() salajengna ngapdet tampilanna. */
+    }
+    var denyBannerTimer = 0;
+    function flashDenyBanner(msg){
+      /* Panolakan klik 3D baheula ngan kaciri dina log di sisi katuhu —
+         pamake ukur nampa sinyalna teu robah warna, siga teu bisa
+         dipencet. Ayeuna alesanana ditembongkeun sakeudeung dina banner
+         beureum di luhur pandangan 3D. Banner panutupan Jalur 3 nu keur
+         aktif teu diganggu. */
+      if (closureActive()) return;
+      var bn = $("eventBanner");
+      bn.textContent = "⚠ Sinyal ditolak: " + msg;
+      bn.classList.add("show");
+      if (denyBannerTimer) clearTimeout(denyBannerTimer);
+      denyBannerTimer = setTimeout(function(){
+        if (!closureActive()) $("eventBanner").classList.remove("show");
+      }, 2800);
     }
     function deny(btn, msg){
       G.warnings++; G.safety = Math.max(0, G.safety - 3);
       addLog("warn", "⚠ Interlocking menolak: " + msg);
       sndDeny();
       if (btn){ btn.classList.remove("shake"); void btn.offsetWidth; btn.classList.add("shake"); }
+      else flashDenyBanner(msg);
       updateHUD();
     }
     function setSwitch(side, n, btn){
@@ -928,20 +876,20 @@
       var outSig = tr.dir===1 ? "Sinyal Keluar Timur" : "Sinyal Keluar Barat";
       switch(tr.state){
         case "scheduled":
-          h = "Berangkat dari "+tr.from+" pukul "+clockStr(tr.spawn)+". Jadwal datang di Sukamaju "+clockStr(tr.schedArrive)+", berangkat lagi "+clockStr(tr.schedDepart)+" ke "+tr.to+" — rencana Jalur "+tr.planned+". Siapkan wesel "+inSide+" dari sekarang."; break;
+          h = "Berangkat dari "+tr.from+" pukul "+clockStr(tr.spawn)+". Jadwal datang di Sukamaju "+clockStr(tr.schedArrive)+", berangkat lagi "+clockStr(tr.schedDepart)+" ke "+tr.to+" — rencana Jalur "+tr.planned+". Siapkan dari sekarang: klik penanda wesel "+inSide+" di pandangan 3D."; break;
         case "approach":
-          h = "Sedang mendekat. Atur Wesel "+inSide+" ke Jalur "+suggestedTrack(tr)+", lalu buka "+inSig+" sebelum ia berhenti terlalu lama."; break;
+          h = "Sedang mendekat. Klik penanda Wesel "+inSide+" di 3D sampai ke Jalur "+suggestedTrack(tr)+", lalu klik tiang "+inSig+" untuk membukanya sebelum ia berhenti terlalu lama."; break;
         case "waiting":
-          h = "Tertahan di sinyal masuk! Atur Wesel "+inSide+" ke Jalur "+suggestedTrack(tr)+" (pastikan kosong), lalu buka "+inSig+"."; break;
+          h = "Tertahan di sinyal masuk! Klik penanda Wesel "+inSide+" di 3D sampai ke Jalur "+suggestedTrack(tr)+" (pastikan kosong), lalu klik tiang "+inSig+" untuk membukanya."; break;
         case "entering": h = "Sedang masuk ke Jalur "+tr.track+". Wesel "+inSide+" terkunci sampai kereta lewat."; break;
         case "arriving":
           h = tr.dwellTotal===0
-            ? "KA barang melintas Jalur "+tr.track+". Cepat: atur Wesel "+outSide+" ke Jalur "+tr.track+" dan buka "+outSig+" supaya tidak perlu berhenti."
+            ? "KA barang melintas Jalur "+tr.track+". Cepat: klik penanda Wesel "+outSide+" di 3D sampai ke Jalur "+tr.track+" dan klik tiang "+outSig+" untuk membukanya supaya tidak perlu berhenti."
             : "Sedang menuju peron Jalur "+tr.track+". Setelah berhenti, siapkan rute keluarnya."; break;
         case "dwell":
-          h = "Datang pukul "+clockStr(tr.actualArrive!==null ? tr.actualArrive : tr.schedArrive)+". Naik-turun penumpang di Jalur "+tr.track+", sisa ±"+Math.ceil(tr.dwellLeft)+" menit — jadwal berangkat "+clockStr(tr.schedDepart)+". Siapkan Wesel "+outSide+" ke Jalur "+tr.track+"."; break;
+          h = "Datang pukul "+clockStr(tr.actualArrive!==null ? tr.actualArrive : tr.schedArrive)+". Naik-turun penumpang di Jalur "+tr.track+", sisa ±"+Math.ceil(tr.dwellLeft)+" menit — jadwal berangkat "+clockStr(tr.schedDepart)+". Siapkan keberangkatan: klik penanda Wesel "+outSide+" di 3D sampai ke Jalur "+tr.track+"."; break;
         case "ready":
-          h = "Siap berangkat dari Jalur "+tr.track+" — jadwal berangkat "+clockStr(tr.schedDepart)+". Atur Wesel "+outSide+" ke Jalur "+tr.track+", lalu buka "+outSig+"."; break;
+          h = "Siap berangkat dari Jalur "+tr.track+" — jadwal berangkat "+clockStr(tr.schedDepart)+". Klik penanda Wesel "+outSide+" di 3D sampai ke Jalur "+tr.track+", lalu klik tiang "+outSig+" untuk membukanya."; break;
         case "exiting": h = "Sedang berangkat ke "+tr.to+". Wesel "+outSide+" terkunci sampai kereta keluar wilayah stasiun."; break;
         case "done": h = "Sudah tiba di lintas berikutnya menuju "+tr.to+"." + (tr.actualDepart!==null ? " Berangkat aktual "+clockStr(tr.actualDepart)+" (jadwal "+clockStr(tr.schedDepart)+")." : "") + " Keterlambatan akhir: "+tr.delay+" menit."; break;
       }
@@ -1019,13 +967,13 @@
       if (!container) { S3 = { failed: true }; return; }
       if (typeof THREE === "undefined"){
         S3 = { failed: true };
-        container.innerHTML = '<div class="boardfallback">Pandangan 3D membutuhkan pustaka Three.js dari internet dan gagal dimuat. Periksa koneksi lalu muat ulang halaman — kontrol wesel &amp; sinyal di bawah tetap berfungsi.</div>';
+        container.innerHTML = '<div class="boardfallback">Pandangan 3D membutuhkan pustaka Three.js dari internet dan gagal dimuat. Wesel &amp; sinyal diatur ku klik 3D, jadi periksa koneksi lalu muat ulang halaman supaya pandangan 3D-na jalan deui.</div>';
         return;
       }
       var scene = new THREE.Scene();
       scene.background = new THREE.Color(0x87bfe8);
       scene.fog = new THREE.Fog(0xa8cbe8, 110, 210);
-      var camera = new THREE.PerspectiveCamera(50, 2, 0.1, 400);
+      var camera = new THREE.PerspectiveCamera(54, 2, 0.1, 400);
       var renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
       renderer.shadowMap.enabled = true;
@@ -1332,6 +1280,21 @@
       });
 
       var clickables = [];
+      /* Tekstur glow babarengan keur sprite lampu sinyal: inti bodas caang
+         di tengah, luntur ka transparan di sisi — digambar sakali, dipake
+         ku unggal lénsa (warna asalna tina warna sprite-na). */
+      var glowTex = (function(){
+        var gc = document.createElement("canvas"); gc.width = gc.height = 128;
+        var gx = gc.getContext("2d");
+        var gr = gx.createRadialGradient(64, 64, 2, 64, 64, 62);
+        gr.addColorStop(0, "rgba(255,255,255,1)");
+        gr.addColorStop(0.28, "rgba(255,255,255,.55)");
+        gr.addColorStop(0.62, "rgba(255,255,255,.16)");
+        gr.addColorStop(1, "rgba(255,255,255,0)");
+        gx.fillStyle = gr; gx.fillRect(0, 0, 128, 128);
+        var gt = new THREE.CanvasTexture(gc); gt.minFilter = THREE.LinearFilter;
+        return gt;
+      })();
       /* signals */
       var signalObjs = {};
       function makeSignal(key, x, z, label){
@@ -1339,11 +1302,28 @@
         var g = new THREE.Group(); g.position.set(x, 0.55, z); world.add(g);
         var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 3.8, 8), postMat);
         pole.position.y = 1.9; pole.castShadow = true; g.add(pole);
-        box(g, 1.15, 1.9, 0.55, 0, 4.15, 0, stdMat(0x1d3247, 0.6, 0.3));
-        var redMat = stdMat(0x551512, 0.4, 0, 0xe0483e, 1.6);
-        var grnMat = stdMat(0x12351c, 0.4, 0, 0x2fbf5a, 0.06);
-        var gLamp = new THREE.Mesh(new THREE.SphereGeometry(0.27, 12, 10), grnMat); gLamp.position.set(0, 4.55, -0.32); g.add(gLamp);
-        var rLamp = new THREE.Mesh(new THREE.SphereGeometry(0.27, 12, 10), redMat); rLamp.position.set(0, 3.78, -0.32); g.add(rLamp);
+        box(g, 1.5, 2.3, 0.7, 0, 4.25, 0, stdMat(0x1d3247, 0.6, 0.3));
+        /* Lampu sinyal: DUA SISI (hareup + tukang kotak sinyal), lénsa GEDE
+           (r 0.42), warna jenuh pinuh MeshBasicMaterial, DITAMBAH sprite
+           glow additive nu salawasna nyanghareup kaméra. Palajaran ti dua
+           perbaikan saméméhna: logika aspekna geus bener (warna bahan
+           robah), tapi ti kaméra bawaan (jarak 64) lénsa leutik teh ngan
+           sababaraha piksel sarta warnana jadi pucat ku sRGBEncoding —
+           katempona "teu hurung" wae. Sprite glow nu caang (inti bodas →
+           warna aspek → transparan) nu ngajadikeun lampuna teu bisa
+           kaliwat ti jarak jauh jeung ti sudut mana wae; hurungna diatur
+           di updateScene3D nuturkeun aspekna. */
+        var redMat = new THREE.MeshBasicMaterial({ color: 0xff1806 });
+        var grnMat = new THREE.MeshBasicMaterial({ color: 0x0d3319 });
+        var redGlows = [], grnGlows = [];
+        [-0.48, 0.48].forEach(function(zc){
+          var gLamp = new THREE.Mesh(new THREE.SphereGeometry(0.42, 14, 12), grnMat); gLamp.position.set(0, 4.85, zc); g.add(gLamp);
+          var rLamp = new THREE.Mesh(new THREE.SphereGeometry(0.42, 14, 12), redMat); rLamp.position.set(0, 3.95, zc); g.add(rLamp);
+          var gSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0x2bff62, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+          gSpr.scale.set(3.1, 3.1, 1); gSpr.position.set(0, 4.85, zc * 1.25); g.add(gSpr); grnGlows.push(gSpr);
+          var rSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xff2a18, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
+          rSpr.scale.set(3.1, 3.1, 1); rSpr.position.set(0, 3.95, zc * 1.25); g.add(rSpr); redGlows.push(rSpr);
+        });
         var L = makeLabelSprite(512, 64, 10.5, 1.3);
         drawLabel(L, label, function(c2, cv2){
           c2.clearRect(0,0,512,64); pill(c2, 56, 10, 400, 44, 10, "rgba(10,22,34,.8)");
@@ -1351,9 +1331,12 @@
           c2.fillText(label, 256, 41);
         });
         L.sprite.position.set(0, 5.9, 0); g.add(L.sprite);
-        var hit = box(g, 2.6, 5.6, 2.6, 0, 2.6, 0, new THREE.MeshBasicMaterial({ visible: false }), false);
+        /* Kotak klik ngahaja jangkung & rubak: nutupan tiang, kotak lampu,
+           nepi ka label di luhurna (label baheula aya di luar kotak klik,
+           jadi klik pas dina tulisanana teu ngahasilkeun nanaon). */
+        var hit = box(g, 3.4, 7.6, 3.4, 0, 3.3, 0, new THREE.MeshBasicMaterial({ visible: false }), false);
         hit.userData = { kind: "sig", key: key }; clickables.push(hit);
-        signalObjs[key] = { redMat: redMat, grnMat: grnMat };
+        signalObjs[key] = { redMat: redMat, grnMat: grnMat, redGlows: redGlows, grnGlows: grnGlows, label: L, name: label, lastState: "" };
       }
       makeSignal("inW", -46, -3.4, "MASUK BARAT");
       makeSignal("inE", 46, 3.4, "MASUK TIMUR");
@@ -1373,7 +1356,7 @@
         dia.position.y = 2.5; dia.castShadow = true; g.add(dia);
         var L = makeLabelSprite(512, 96, 10.5, 2.0);
         L.sprite.position.set(0, 4.1, 0); g.add(L.sprite);
-        var hit = box(g, 3.0, 4.6, 3.0, 0, 2.2, 0, new THREE.MeshBasicMaterial({ visible: false }), false);
+        var hit = box(g, 3.4, 6.4, 3.4, 0, 2.9, 0, new THREE.MeshBasicMaterial({ visible: false }), false);
         hit.userData = { kind: "sw", side: side }; clickables.push(hit);
         switchObjs[side] = { dia: dia, diaMat: diaMat, label: L };
       }
@@ -1684,8 +1667,13 @@
         railMats: railMats, switchBeds: switchBeds, signalObjs: signalObjs,
         switchObjs: switchObjs, closureGroup: closureGroup, trainObjs: trainObjs,
         clickables: clickables, passengers: platformPassengers, animT: 0,
-        cam: { az: -0.62, el: 0.60, r: 52, tx: 0, ty: 1.2, tz: 0 },
-        goal: { az: -0.62, el: 0.60, r: 52, tx: 0, ty: 1.2, tz: 0 },
+        /* Kaméra bawaan digeser ka kulon + ditarik mundur + FOV 54: baheula
+           inW kaluar pigura ka kénca (NDC x -1.29) jeung outW kaluar ka
+           handap (NDC y -1.17), jadi dua sinyal kulon eta teu bisa diklik
+           pisan dina tampilan awal. Ayeuna kaopat sinyal + dua wesel aya di
+           jero pigura kalawan sisa lega di desktop, landscape, jeung potret. */
+        cam: { az: -0.50, el: 0.60, r: 64, tx: -5, ty: 1.2, tz: 3 },
+        goal: { az: -0.50, el: 0.60, r: 64, tx: -5, ty: 1.2, tz: 3 },
         lastW: 0, lastTs: 0
       };
       attachCameraControls();
@@ -1751,7 +1739,7 @@
           document.querySelectorAll("[data-view]").forEach(function(x){ x.classList.remove("on"); });
           b.classList.add("on");
           var v = b.dataset.view;
-          if (v === "bebas") S3.goal = { az: -0.62, el: 0.60, r: 52, tx: 0, ty: 1.2, tz: 0 };
+          if (v === "bebas") S3.goal = { az: -0.50, el: 0.60, r: 64, tx: -5, ty: 1.2, tz: 3 };
           else if (v === "atas") S3.goal = { az: 0, el: 1.48, r: 76, tx: 0, ty: 0, tz: 0 };
           else if (v === "peron") S3.goal = { az: 1.12, el: 0.12, r: 30, tx: 0, ty: 1.6, tz: 2 };
           else if (v === "samping") S3.goal = { az: 1.57, el: 0.3, r: 54, tx: 0, ty: 1.2, tz: 0 };
@@ -1778,20 +1766,32 @@
       var rc = new THREE.Raycaster();
       rc.setFromCamera(mouse, S3.camera);
       var hits = rc.intersectObjects(S3.clickables, false);
+      var usable = [];
       for (var i = 0; i < hits.length; i++){
-        var u = hits[i].object.userData;
-        var obj = hits[i].object;
-        var vis = true, o = obj;
-        while (o){ if (o.visible === false && o !== obj) { vis = false; break; } o = o.parent; }
-        if (obj.parent && obj.parent.visible === false) continue;
-        if (u.kind === "train"){
-          var tr = trainById(u.id);
-          if (tr && tr.state !== "scheduled" && tr.state !== "done") selectTrain(u.id);
-          return;
-        }
-        if (u.kind === "sig"){ toggleSignal(u.key, $("sig_" + u.key)); return; }
-        if (u.kind === "sw"){ cycleSwitch(u.side); return; }
+        var obj0 = hits[i].object;
+        if (obj0.parent && obj0.parent.visible === false) continue;
+        usable.push(hits[i]);
       }
+      if (!usable.length) return;
+      /* Prioritas klik: tiang sinyal & penanda wesel teh target leutik nu
+         mindeng kahalangan kotak klik kereta (badag) nu keur nunggu pas di
+         hareupeunana — baheula klik kana tiang Masuk Barat kabawa milih
+         kereta nu nunggu, sinyalna teu robah warna. Ayeuna mun aya hit
+         sinyal/wesel dina jarak +12 ti hit panghareupna, eta nu dipake;
+         mun euweuh, kakara hit panghareupna (biasana kereta). */
+      var chosen = usable[0];
+      for (var j = 0; j < usable.length; j++){
+        var uj = usable[j].object.userData;
+        if ((uj.kind === "sig" || uj.kind === "sw") && usable[j].distance <= usable[0].distance + 12){ chosen = usable[j]; break; }
+      }
+      var u = chosen.object.userData;
+      if (u.kind === "train"){
+        var tr = trainById(u.id);
+        if (tr && tr.state !== "scheduled" && tr.state !== "done") selectTrain(u.id);
+        return;
+      }
+      if (u.kind === "sig"){ toggleSignal(u.key, null); return; }
+      if (u.kind === "sw"){ cycleSwitch(u.side); return; }
     }
     function trainStatusText(tr){
       switch(tr.state){
@@ -1809,12 +1809,28 @@
       var n, side;
       /* station clock follows Jam Dinas — redraw once per game minute */
       if (S3.stationClock){ var cmin = Math.floor(G.t); if (S3.stationClock.last !== cmin){ S3.stationClock.last = cmin; S3.stationClock.draw(360 + G.t); } }
-      /* signals */
+      /* signals — lénsa MeshBasicMaterial warna jenuh pinuh keur aspek nu
+         aktif (beureum = berhenti, héjo = jalan), warna poek keur nu pareum,
+         ditambah sprite glow additive nu caangna nuturkeun aspekna sangkan
+         lampuna katempo hurung ti kajauhan. Labelna oge meunang titik warna
+         aspekna sangkan kaayaan sinyal kabaca ti kajauhan. */
       SIG_DEFS.forEach(function(d){
         var o = S3.signalObjs[d.key]; if (!o) return;
         var open = !!G.sig[d.key];
-        o.grnMat.emissiveIntensity = open ? 1.7 : 0.06;
-        o.redMat.emissiveIntensity = open ? 0.06 : 1.7;
+        o.redMat.color.setHex(open ? 0x38100d : 0xff1806);
+        o.grnMat.color.setHex(open ? 0x00e63a : 0x0d3319);
+        if (o.redGlows) o.redGlows.forEach(function(s){ s.material.opacity = open ? 0 : 0.95; });
+        if (o.grnGlows) o.grnGlows.forEach(function(s){ s.material.opacity = open ? 0.95 : 0; });
+        if (o.label && o.lastState !== (open ? "G" : "R")){
+          o.lastState = open ? "G" : "R";
+          drawLabel(o.label, o.name + "|" + o.lastState, function(c2, cv2){
+            c2.clearRect(0,0,512,64); pill(c2, 56, 10, 400, 44, 10, "rgba(10,22,34,.8)");
+            c2.beginPath(); c2.arc(92, 32, 11, 0, Math.PI*2);
+            c2.fillStyle = open ? "#2bff62" : "#ff4038"; c2.fill();
+            c2.fillStyle = "#cfe0ee"; c2.font = "700 25px 'IBM Plex Mono', monospace"; c2.textAlign = "center";
+            c2.fillText(o.name, 268, 41);
+          });
+        }
       });
       /* switches */
       ["W","E"].forEach(function(sd){
